@@ -178,27 +178,14 @@ async function bump(code,n,dir){
   const nv=Math.max(0,(owned[k]||0)+dir);
   owned[k]=nv;
   
-  // Salva estado do filtro e aba antes de render
-  const activeFilter=document.querySelector('[data-filter].active')?.dataset.filter||'todas';
-  const searchQuery=document.getElementById('searchTeam')?.value.toLowerCase()||'';
-  const activeTab=document.querySelector('.tab-btn.active')?.dataset.tab||'album';
-  
-  render();
-  
-  // Restaura aba e filtro
-  setTimeout(()=>{
-    // Restaura aba
-    document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
-    document.querySelector(`[data-tab="${activeTab}"]`)?.classList.add('active');
-    document.querySelectorAll('.tab-content').forEach(c=>c.classList.remove('active'));
-    document.getElementById(activeTab)?.classList.add('active');
-    
-    // Restaura filtro
-    document.querySelectorAll('[data-filter]').forEach(b=>b.classList.remove('active'));
-    document.querySelector(`[data-filter="${activeFilter}"]`)?.classList.add('active');
-    if(document.getElementById('searchTeam'))document.getElementById('searchTeam').value=searchQuery.toUpperCase();
-    applyFilters(activeFilter,searchQuery);
-  },0);
+  // Só atualiza a visual da figurinha, sem render completo
+  const cell=document.querySelector(`[data-code="${code}"][data-n="${n}"]`);
+  if(cell){
+    cell.classList.toggle('have',nv>0);
+    cell.classList.toggle('rep',nv>1);
+    cell.textContent=nv>1?nv:'';
+    if(nv>1)cell.setAttribute('data-c',nv-1);
+  }
   
   try{
     console.log('Bump:', k, nv, 'User:', user?.id, 'Album:', currentAlbum?.id);
@@ -629,12 +616,17 @@ function exportPDF(){
 }
 
 function applyFilters(filter,query){
+  // Remove acentos da query
+  const normalizeText = (text) => text.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+  const normalizedQuery = normalizeText(query);
+  
   document.querySelectorAll('.cell').forEach(c=>{
     const team=c.closest('.team').dataset.team;
+    const normalizedTeam = normalizeText(team);
     const isMissing=+c.dataset.missing;
     const isRepeated=+c.dataset.repeated;
     let show=true;
-    if(query)show=team.includes(query);
+    if(normalizedQuery)show=normalizedTeam.includes(normalizedQuery);
     if(filter==='faltam')show=show&&isMissing;
     else if(filter==='repetidas')show=show&&isRepeated;
     c.classList.toggle('hidden',!show);
