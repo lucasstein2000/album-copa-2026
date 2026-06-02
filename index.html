@@ -284,8 +284,14 @@ async function renderLista(){
     }
   });
   
+  let missingCount=Object.values(byTeam).reduce((sum,t)=>sum+t.missing.length,0);
+  let repeatedCount=Object.values(byTeam).reduce((sum,t)=>sum+t.repeated.length,0);
+  
   html+=`<div class="list-box">
-    <div class="list-title">🔴 Faltam</div>`;
+    <div class="team-toggle" onclick="toggleListSection(this)" style="cursor:pointer;padding:10px;background:rgba(244,196,48,.2);border-radius:6px;margin-bottom:8px;user-select:none;font-weight:700">
+      🔴 Faltam (${missingCount})
+    </div>
+    <div class="list-section" style="display:block">`;
   
   if(Object.keys(byTeam).length===0){
     html+=`<div class="list-item" style="opacity:.5">Nenhuma 🎉</div>`;
@@ -293,7 +299,7 @@ async function renderLista(){
     Object.entries(byTeam).forEach(([teamName,data])=>{
       if(data.missing.length>0){
         html+=`<div style="margin-top:8px">
-          <div class="team-toggle" onclick="toggleTeam(this)" style="cursor:pointer;padding:8px;background:rgba(0,0,0,.2);border-radius:6px;margin-bottom:4px;user-select:none">
+          <div class="team-toggle" onclick="toggleTeam(event)" style="cursor:pointer;padding:8px;background:rgba(0,0,0,.2);border-radius:6px;margin-bottom:4px;user-select:none">
             ${data.flag} <strong>${teamName}</strong> (${data.missing.length})
           </div>
           <div class="team-list" style="display:none;padding-left:12px">
@@ -304,8 +310,11 @@ async function renderLista(){
     });
   }
   
-  html+=`</div><div class="list-box">
-    <div class="list-title">🟡 Repetidas</div>`;
+  html+=`</div></div><div class="list-box">
+    <div class="team-toggle" onclick="toggleListSection(this)" style="cursor:pointer;padding:10px;background:rgba(244,196,48,.2);border-radius:6px;margin-bottom:8px;user-select:none;font-weight:700">
+      🟡 Repetidas (${repeatedCount})
+    </div>
+    <div class="list-section" style="display:block">`;
   
   if(Object.values(byTeam).every(t=>t.repeated.length===0)){
     html+=`<div class="list-item" style="opacity:.5">Nenhuma</div>`;
@@ -313,7 +322,7 @@ async function renderLista(){
     Object.entries(byTeam).forEach(([teamName,data])=>{
       if(data.repeated.length>0){
         html+=`<div style="margin-top:8px">
-          <div class="team-toggle" onclick="toggleTeam(this)" style="cursor:pointer;padding:8px;background:rgba(0,0,0,.2);border-radius:6px;margin-bottom:4px;user-select:none">
+          <div class="team-toggle" onclick="toggleTeam(event)" style="cursor:pointer;padding:8px;background:rgba(0,0,0,.2);border-radius:6px;margin-bottom:4px;user-select:none">
             ${data.flag} <strong>${teamName}</strong> (${data.repeated.length})
           </div>
           <div class="team-list" style="display:none;padding-left:12px">
@@ -324,18 +333,31 @@ async function renderLista(){
     });
   }
   
-  html+=`</div>`;
+  html+=`</div></div>`;
   document.getElementById('lista').innerHTML=html;
 }
 
-window.toggleTeam=(el)=>{
+window.toggleTeam=(e)=>{
+  if(e.stopPropagation)e.stopPropagation();
+  const el=e.currentTarget||e;
   const list=el.nextElementSibling;
   if(list.style.display==='none'){
     list.style.display='block';
-    el.style.background='rgba(244,196,48,.2)';
+    el.style.background='rgba(244,196,48,.15)';
   }else{
     list.style.display='none';
     el.style.background='rgba(0,0,0,.2)';
+  }
+};
+
+window.toggleListSection=(el)=>{
+  const section=el.nextElementSibling;
+  if(section.style.display==='none'){
+    section.style.display='block';
+    el.style.background='rgba(244,196,48,.2)';
+  }else{
+    section.style.display='none';
+    el.style.background='rgba(0,0,0,.15)';
   }
 };
 
@@ -365,14 +387,19 @@ async function renderAlbums(){
 
 async function renderCollaborators(){
   try{
+    const {data:owner}=await sb.from('profiles').select('*').eq('id',currentAlbum.owner_id).single();
     const {data:collab}=await sb.from('album_collaborators').select('user_id').eq('album_id',currentAlbum.id);
     const {data:users}=await sb.from('profiles').select('*').in('id',collab.map(c=>c.user_id));
     
     let html='<h2>👥 Colaboradores</h2>';
+    html+=`<div class="collab-item" style="background:rgba(244,196,48,.1)">
+      <div class="collab-name">${owner.name||'Dono'} 👑</div>
+    </div>`;
+    
     users.forEach(u=>{
       html+=`<div class="collab-item">
         <div class="collab-name">${u.name||'Usuário'}</div>
-        <button class="btn-danger" style="padding:6px 10px;font-size:11px" onclick="removeCollab('${u.id}')">Remover</button>
+        ${currentAlbum.owner_id===user.id?`<button class="btn-danger" style="padding:6px 10px;font-size:11px" onclick="removeCollab('${u.id}')">Remover</button>`:''}
       </div>`;
     });
     
@@ -495,7 +522,7 @@ function render(){
     <button class="btn-sec" style="margin-bottom:8px;margin-right:8px" id="logoutBtn">Logout</button>
     <button class="btn-sec" style="margin-bottom:8px;margin-right:8px" id="idBtn">📋 Meu ID</button>
     <button class="btn-sec" style="margin-bottom:8px;margin-right:8px" id="backBtn">← Álbuns</button>
-    <button class="btn-sec" style="margin-bottom:8px" id="inviteBtn">👥 Adicionar</button>
+    ${isOwner?'<button class="btn-sec" style="margin-bottom:8px" id="inviteBtn">👥 Adicionar</button>':''}
     ${isOwner?'<button class="btn-danger" style="margin-bottom:8px" id="deleteBtn">🗑️ Deletar</button>':''}
     
     <div class="tabs">
@@ -573,7 +600,7 @@ function render(){
     modal.onclick=(e)=>{if(e.target===modal)modal.remove();};
   };
   document.getElementById('backBtn').onclick=()=>{currentAlbum=null;render();};
-  document.getElementById('inviteBtn').onclick=inviteCollaborator;
+  if(document.getElementById('inviteBtn'))document.getElementById('inviteBtn').onclick=inviteCollaborator;
   document.getElementById('editBtn').onclick=editAlbumName;
   if(isOwner)document.getElementById('deleteBtn').onclick=deleteAlbum;
   
