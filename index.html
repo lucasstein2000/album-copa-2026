@@ -16,6 +16,7 @@
 .auth-box h2{color:var(--gold);margin:0 0 14px}.auth-box input{width:100%;margin:8px 0;background:rgba(0,0,0,.3);border:1px solid var(--line);color:var(--paper);border-radius:8px;padding:11px;font-family:'Space Mono',monospace;font-size:13px}
 .auth-box button{width:100%;margin-top:12px;background:var(--gold);color:var(--ink);border:none;border-radius:8px;padding:11px;font-weight:700;cursor:pointer}.auth-box button:hover{filter:brightness(.95)}.toggle{font-size:12px;opacity:.7;margin-top:12px;text-align:center}.toggle a{color:var(--gold);cursor:pointer;text-decoration:underline}
 .tabs{display:flex;gap:8px;margin:16px 0;flex-wrap:wrap}.tabs button{background:rgba(0,0,0,.22);border:1px solid var(--line);color:var(--paper);border-radius:8px;padding:9px 13px;cursor:pointer;font-family:'Space Mono',monospace;font-weight:700;font-size:12px}.tabs button.active{background:var(--gold);color:var(--ink)}
+.filter-btn{background:rgba(0,0,0,.22);border:1px solid var(--line);color:var(--paper);border-radius:8px;padding:9px 13px;cursor:pointer;font-family:'Space Mono',monospace;font-weight:700;font-size:12px}.filter-btn.active{background:var(--gold);color:var(--ink)}
 .tab-content{display:none}.tab-content.active{display:block}
 .top{display:flex;gap:10px;align-items:center;margin:12px 0;flex-wrap:wrap}.tot{font-family:'Bricolage Grotesque',sans-serif;font-weight:900;font-size:20px}.tot small{font-size:12px;opacity:.6}.bar{flex:1;min-width:120px;height:9px;border-radius:6px;background:rgba(0,0,0,.3)}.bar span{display:block;height:100%;background:linear-gradient(90deg,#1fae5a,#f4c430)}
 .grp{margin-top:18px}.grp-h{font-family:'Bricolage Grotesque',sans-serif;font-weight:800;font-size:13px;text-transform:uppercase;letter-spacing:2px;opacity:.7;border-bottom:1px solid var(--line);padding-bottom:5px;margin-bottom:12px}
@@ -37,6 +38,9 @@ button{font-family:'Space Mono',monospace;font-weight:700;border:none;border-rad
 .album-item:hover{background:rgba(0,0,0,.3)}
 .album-title{font-weight:700;color:var(--gold);margin-bottom:4px}
 .album-info{font-size:11px;opacity:.6}
+.list-box{background:rgba(0,0,0,.2);border:1px solid var(--line);border-radius:9px;padding:12px;margin:12px 0}
+.list-title{font-weight:700;color:var(--gold);margin-bottom:8px;font-size:13px}
+.list-item{font-size:12px;padding:6px 0;opacity:.8}
 </style>
 </head>
 <body>
@@ -260,6 +264,32 @@ async function renderHistory(){
   }catch(e){console.error(e);}
 }
 
+async function renderLista(){
+  let html='<h2>📋 Faltam & Repetidas</h2>';
+  let missing=[],repeated=[];
+  
+  TEAMS.forEach(t=>{
+    if(t.code==='CC')return;
+    for(let i=1;i<=t.count;i++){
+      const c=owned[t.code+'-'+i]||0;
+      if(c===0)missing.push(`${t.code}-${i}`);
+      else if(c>1)repeated.push(`${t.code}-${i} (×${c})`);
+    }
+  });
+  
+  html+=`<div class="list-box">
+    <div class="list-title">🔴 Faltam (${missing.length}):</div>
+    ${missing.length>0?missing.map(s=>`<div class="list-item">${s}</div>`).join(''):'<div class="list-item" style="opacity:.5">Nenhuma</div>'}
+  </div>
+  
+  <div class="list-box">
+    <div class="list-title">🟡 Repetidas (${repeated.length}):</div>
+    ${repeated.length>0?repeated.map(s=>`<div class="list-item">${s}</div>`).join(''):'<div class="list-item" style="opacity:.5">Nenhuma</div>'}
+  </div>`;
+  
+  document.getElementById('lista').innerHTML=html;
+}
+
 async function renderAlbums(){
   try{
     const {data:owned}=await sb.from('albums').select('*').eq('owner_id',user.id);
@@ -303,6 +333,15 @@ async function renderCollaborators(){
 
 window.removeCollab=(id)=>removeCollaborator(id);
 window.selectAlbum=async(id)=>{
+  try{
+    const {data:album}=await sb.from('albums').select('*').eq('id',id).single();
+    currentAlbum=album;
+    await loadStickers();
+    render();
+  }catch(e){toast('Erro ao carregar álbum');}
+};
+
+window.selectAlbumFromMenu=async(id)=>{
   try{
     const {data:album}=await sb.from('albums').select('*').eq('id',id).single();
     currentAlbum=album;
@@ -393,15 +432,6 @@ async function loadAlbumsMenu(){
   }catch(e){console.error(e);}
 }
 
-window.selectAlbumFromMenu=async(id)=>{
-  try{
-    const {data:album}=await sb.from('albums').select('*').eq('id',id).single();
-    currentAlbum=album;
-    await loadStickers();
-    render();
-  }catch(e){toast('Erro ao carregar álbum');}
-};
-
 function render(){
   if(!user){renderAuth();return;}
   if(!currentAlbum){renderAlbumList();return;}
@@ -419,21 +449,20 @@ function render(){
     ${isOwner?'<button class="btn-danger" style="margin-bottom:8px" id="deleteBtn">🗑️ Deletar</button>':''}
     
     <div class="tabs">
-      <button class="tab-btn" data-tab="albums">📚 Meus Álbuns</button>
       <button class="tab-btn active" data-tab="album">📊 Álbum</button>
+      <button class="tab-btn" data-tab="lista">📋 Lista</button>
       <button class="tab-btn" data-tab="market">🔄 Trocas</button>
       <button class="tab-btn" data-tab="history">🕘 Histórico</button>
       ${isOwner?'<button class="tab-btn" data-tab="collab">👥 Colaboradores</button>':''}
     </div>
     
-    <div id="albums" class="tab-content"><p style="opacity:.6">Carregando…</p></div>
     <div id="album" class="tab-content active">
       <div style="margin-bottom:14px">
         <input type="text" id="searchTeam" placeholder="🔍 Buscar time..." style="width:100%;max-width:300px;margin-bottom:10px">
         <div style="display:flex;gap:8px;flex-wrap:wrap">
-          <button class="tab-btn active" data-filter="todas" style="flex:1;min-width:80px">Todas</button>
-          <button class="tab-btn" data-filter="faltam">Faltam</button>
-          <button class="tab-btn" data-filter="repetidas">Repetidas</button>
+          <button class="filter-btn active" data-filter="todas" style="flex:1;min-width:80px">Todas</button>
+          <button class="filter-btn" data-filter="faltam">Faltam</button>
+          <button class="filter-btn" data-filter="repetidas">Repetidas</button>
         </div>
       </div>
       
@@ -473,6 +502,7 @@ function render(){
       }).join('')}
     </div>
     
+    <div id="lista" class="tab-content"><p style="opacity:.6">Carregando…</p></div>
     <div id="market" class="tab-content"><p style="opacity:.6">Carregando trocas…</p></div>
     <div id="history" class="tab-content"><p style="opacity:.6">Carregando histórico…</p></div>
     ${isOwner?'<div id="collab" class="tab-content"><p style="opacity:.6">Carregando…</p></div>':''}
@@ -500,7 +530,6 @@ function render(){
         else if(activeFilter==='repetidas')show=show&&repeated>0;
         t.style.display=show?'block':'none';
       });
-      // Esconde grupos vazios
       document.querySelectorAll('.grp').forEach(grp=>{
         const hasVisibleTeams=grp.querySelector('.team[style="display: block"], .team:not([style*="display: none"])');
         grp.style.display=hasVisibleTeams?'block':'none';
@@ -523,7 +552,6 @@ function render(){
         else if(filter==='repetidas')show=show&&repeated>0;
         t.style.display=show?'block':'none';
       });
-      // Esconde grupos vazios
       document.querySelectorAll('.grp').forEach(grp=>{
         const hasVisibleTeams=grp.querySelector('.team[style="display: block"], .team:not([style*="display: none"])');
         grp.style.display=hasVisibleTeams?'block':'none';
@@ -544,7 +572,7 @@ function render(){
     document.querySelectorAll('.tab-content').forEach(x=>x.classList.remove('active'));
     b.classList.add('active');
     document.getElementById(b.dataset.tab).classList.add('active');
-    if(b.dataset.tab==='albums')renderAlbums();
+    if(b.dataset.tab==='lista')renderLista();
     if(b.dataset.tab==='market')renderMarketplace();
     if(b.dataset.tab==='history')renderHistory();
     if(b.dataset.tab==='collab')renderCollaborators();
