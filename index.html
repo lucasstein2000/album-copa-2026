@@ -188,13 +188,17 @@ async function inviteCollaborator(){
   const email=prompt('Email do colaborador:');
   if(!email)return;
   try{
-    const {data:authUser}=await sb.auth.admin.listUsers();
-    const user=authUser?.users?.find(u=>u.email===email);
+    const {data:users}=await sb.auth.admin.listUsers();
+    const user=users?.find(u=>u.user_metadata?.email===email||u.email===email);
     if(!user){toast('Usuário não encontrado');return;}
-    await sb.from('album_collaborators').insert({album_id:currentAlbum.id,user_id:user.id});
+    const {error}=await sb.from('album_collaborators').insert({album_id:currentAlbum.id,user_id:user.id});
+    if(error)throw error;
     toast('Colaborador adicionado!');
     render();
-  }catch(e){toast('Erro: '+e.message);}
+  }catch(e){
+    if(e.message.includes('duplicate')){toast('Já é colaborador');}
+    else{toast('Erro: '+e.message);}
+  }
 }
 
 async function removeCollaborator(userId){
@@ -267,29 +271,75 @@ async function renderHistory(){
 
 async function renderLista(){
   let html='<h2>📋 Faltam & Repetidas</h2>';
-  let missing=[],repeated=[];
+  let byTeam={};
   
   TEAMS.forEach(t=>{
     if(t.code==='CC')return;
+    let teamMissing=[],teamRepeated=[];
     for(let i=1;i<=t.count;i++){
       const c=owned[t.code+'-'+i]||0;
-      if(c===0)missing.push({code:`${t.code}-${i}`,team:t.name,flag:t.flag});
-      else if(c>1)repeated.push({code:`${t.code}-${i}`,team:t.name,count:c,flag:t.flag});
+      if(c===0)teamMissing.push(`${t.code}-${i}`);
+      else if(c>1)teamRepeated.push({code:`${t.code}-${i}`,count:c});
+    }
+    if(teamMissing.length>0||teamRepeated.length>0){
+      byTeam[t.name]={flag:t.flag,missing:teamMissing,repeated:teamRepeated};
     }
   });
   
   html+=`<div class="list-box">
-    <div class="list-title">🔴 Faltam (${missing.length}):</div>
-    ${missing.length>0?missing.map(s=>`<div class="list-item">${s.flag} ${s.code} • ${s.team}</div>`).join(''):'<div class="list-item" style="opacity:.5">Nenhuma 🎉</div>'}
-  </div>
+    <div class="list-title">🔴 Faltam</div>`;
   
-  <div class="list-box">
-    <div class="list-title">🟡 Repetidas (${repeated.length}):</div>
-    ${repeated.length>0?repeated.map(s=>`<div class="list-item">${s.flag} ${s.code} (×${s.count-1}) • ${s.team}</div>`).join(''):'<div class="list-item" style="opacity:.5">Nenhuma</div>'}
-  </div>`;
+  if(Object.keys(byTeam).length===0){
+    html+=`<div class="list-item" style="opacity:.5">Nenhuma 🎉</div>`;
+  }else{
+    Object.entries(byTeam).forEach(([teamName,data])=>{
+      if(data.missing.length>0){
+        html+=`<div style="margin-top:8px">
+          <div class="team-toggle" onclick="toggleTeam(this)" style="cursor:pointer;padding:8px;background:rgba(0,0,0,.2);border-radius:6px;margin-bottom:4px;user-select:none">
+            ${data.flag} <strong>${teamName}</strong> (${data.missing.length})
+          </div>
+          <div class="team-list" style="display:none;padding-left:12px">
+            ${data.missing.map(code=>`<div class="list-item">${code}</div>`).join('')}
+          </div>
+        </div>`;
+      }
+    });
+  }
   
+  html+=`</div><div class="list-box">
+    <div class="list-title">🟡 Repetidas</div>`;
+  
+  if(Object.values(byTeam).every(t=>t.repeated.length===0)){
+    html+=`<div class="list-item" style="opacity:.5">Nenhuma</div>`;
+  }else{
+    Object.entries(byTeam).forEach(([teamName,data])=>{
+      if(data.repeated.length>0){
+        html+=`<div style="margin-top:8px">
+          <div class="team-toggle" onclick="toggleTeam(this)" style="cursor:pointer;padding:8px;background:rgba(0,0,0,.2);border-radius:6px;margin-bottom:4px;user-select:none">
+            ${data.flag} <strong>${teamName}</strong> (${data.repeated.length})
+          </div>
+          <div class="team-list" style="display:none;padding-left:12px">
+            ${data.repeated.map(item=>`<div class="list-item">${item.code} (×${item.count-1})</div>`).join('')}
+          </div>
+        </div>`;
+      }
+    });
+  }
+  
+  html+=`</div>`;
   document.getElementById('lista').innerHTML=html;
 }
+
+window.toggleTeam=(el)=>{
+  const list=el.nextElementSibling;
+  if(list.style.display==='none'){
+    list.style.display='block';
+    el.style.background='rgba(244,196,48,.2)';
+  }else{
+    list.style.display='none';
+    el.style.background='rgba(0,0,0,.2)';
+  }
+};
 
 async function renderAlbums(){
   try{
