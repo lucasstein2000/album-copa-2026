@@ -241,29 +241,43 @@ async function renderMarketplace(){
     await loadMarketplace();
     let html='<h2>🔄 Trocas</h2>';
     const myReps=Object.entries(owned).filter(([k,v])=>v>1).map(([k])=>k);
-    console.log('My reps:', myReps, 'All albums:', allAlbums);
+    console.log('My reps:', myReps);
+    console.log('All albums:', Object.keys(allAlbums));
+    console.log('Current album:', currentAlbum?.id);
     
+    let foundTrades=0;
     for(const [id,album] of Object.entries(allAlbums)){
-      if(id===currentAlbum.id)continue;
+      console.log('Checking album:', id, album.name);
+      if(id===currentAlbum.id){
+        console.log('  Skipping (own album)');
+        continue;
+      }
       try{
         const {data:sticks}=await sb.from('stickers').select('sticker_code').eq('album_id',id).gt('count',1);
         const theirReps=(sticks||[]).map(s=>s.sticker_code);
         const owner=allUsers[album.owner_id];
         
-        if(!owner)continue;
+        console.log('  Owner:', owner?.name, 'Their reps:', theirReps.length);
+        
+        if(!owner){
+          console.log('  Skipping (no owner found)');
+          continue;
+        }
         
         const myNeed=myReps.filter(r=>theirReps.includes(r));
         const theyNeed=theirReps.filter(r=>myReps.includes(r));
         
         if(myNeed.length>0||theyNeed.length>0){
+          foundTrades++;
           html+=`<div class="trade-box"><div class="user">${owner.name} — ${album.name}</div>`;
           if(myNeed.length>0)html+=`<div class="trade-item">🔴 Você pode dar: ${myNeed.join(', ')}</div>`;
           if(theyNeed.length>0)html+=`<div class="trade-item">🟢 Você pode receber: ${theyNeed.join(', ')}</div>`;
           html+=`</div>`;
         }
-      }catch(e){console.error('Erro ao processar album:', e);}
+      }catch(e){console.error('Erro ao processar album:', id, e);}
     }
     
+    console.log('Found trades:', foundTrades);
     document.getElementById('market').innerHTML=html||'<p style="opacity:.6">Nenhuma troca disponível</p>';
   }catch(e){
     console.error('Marketplace error:', e);
