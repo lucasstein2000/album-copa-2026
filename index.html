@@ -178,10 +178,12 @@ async function bump(code,n,dir){
   owned[k]=nv;
   render();
   try{
+    console.log('Bump:', k, nv, 'User:', user?.id, 'Album:', currentAlbum?.id);
     if(nv===0)await sb.from('stickers').delete().eq('album_id',currentAlbum.id).eq('sticker_code',k);
     else await sb.from('stickers').upsert({album_id:currentAlbum.id,sticker_code:k,count:nv});
-    await sb.from('sticker_log').insert({album_id:currentAlbum.id,sticker_code:k,action:dir>0?'add':'remove',user_id:user.id});
-  }catch(e){toast('Erro ao salvar');}
+    const {error}=await sb.from('sticker_log').insert({album_id:currentAlbum.id,sticker_code:k,action:dir>0?'add':'remove',user_id:user.id});
+    if(error)console.error('Log error:', error);
+  }catch(e){console.error('Bump error:', e);toast('Erro ao salvar');}
 }
 
 async function inviteCollaborator(){
