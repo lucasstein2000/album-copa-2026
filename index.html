@@ -235,12 +235,14 @@ async function renderAuth(){
     <input id="name" type="text" placeholder="Seu nome" style="display:none">
     <button id="submit">Entrar</button>
     <div class="toggle">Novo por aqui? <a id="toggle">Criar conta</a></div>
+    <div class="toggle">Esqueceu a senha? <a id="forgot">Reset</a></div>
   </div>`;
   
   let isSignup=false;
   const $=(s)=>document.getElementById(s);
   $('toggle').onclick=()=>{isSignup=!isSignup;$('mode').textContent=isSignup?'Criar conta':'Login';$('name').style.display=isSignup?'block':'none';};
   $('submit').onclick=()=>{const e=$('email').value,p=$('pass').value;if(isSignup){const n=$('name').value;if(!n){toast('Nome obrigatório');return;}signup(e,p,n);}else login(e,p);};
+  $('forgot').onclick=()=>renderForgotPassword();
 }
 
 function render(){
@@ -319,6 +321,27 @@ async function renderMarket(){
   });
   html+='</div>';
   document.getElementById('market').innerHTML=html;
+}
+
+function renderForgotPassword(){
+  app.innerHTML=`<div class="auth-box">
+    <h2>Reset de Senha</h2>
+    <p style="font-size:12px;opacity:.7;margin-bottom:12px">Digite seu email e vamos enviar um link pra resetar a senha</p>
+    <input id="resetEmail" type="email" placeholder="Seu email">
+    <button id="resetBtn">Enviar link</button>
+    <div class="toggle"><a id="backBtn">Voltar</a></div>
+  </div>`;
+  
+  document.getElementById('resetBtn').onclick=async()=>{
+    const email=document.getElementById('resetEmail').value;
+    if(!email){toast('Email obrigatório');return;}
+    try{
+      await sb.auth.resetPasswordForEmail(email,{redirectTo:`${window.location.origin}?mode=reset`});
+      toast('Link enviado! Confira seu email');
+      setTimeout(renderAuth,2000);
+    }catch(e){toast('Erro: '+e.message);}
+  };
+  document.getElementById('backBtn').onclick=renderAuth;
 }
 
 function renderAlbumList(){
