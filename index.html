@@ -353,7 +353,7 @@ function renderAuth(){
 function renderAlbumList(){
   app.innerHTML=`<h1>Meus <span class="acc">Álbuns</span></h1>
     <button class="btn-gold" id="newBtn" style="margin-bottom:20px">+ Novo Álbum</button>
-    <p style="opacity:.6">Crie um álbum para começar</p>`;
+    <div id="albumsList"></div>`;
   
   setTimeout(()=>{
     const btn=document.getElementById('newBtn');
@@ -362,7 +362,45 @@ function renderAlbumList(){
       if(name)createAlbum(name);
     };
   },50);
+  
+  loadAlbumsMenu();
 }
+
+async function loadAlbumsMenu(){
+  try{
+    const {data:owned}=await sb.from('albums').select('*').eq('owner_id',user.id);
+    const {data:collab}=await sb.from('album_collaborators').select('album_id').eq('user_id',user.id);
+    const collabIds=collab?collab.map(c=>c.album_id):[];
+    let allAlbumsData=[...(owned||[])];
+    if(collabIds.length>0){
+      const {data:collabAlbums}=await sb.from('albums').select('*').in('id',collabIds);
+      allAlbumsData=[...allAlbumsData,...(collabAlbums||[])];
+    }
+    
+    let html='';
+    if(allAlbumsData.length===0){
+      html='<p style="opacity:.6">Nenhum álbum ainda. Crie um novo!</p>';
+    }else{
+      allAlbumsData.forEach(a=>{
+        const isOwner=a.owner_id===user.id;
+        html+=`<div class="album-item" onclick="selectAlbumFromMenu('${a.id}')">
+          <div class="album-title">${a.name} ${isOwner?'(dono)':'(colaborador)'}</div>
+          <div class="album-info">Criado em ${new Date(a.created_at).toLocaleDateString('pt-BR')}</div>
+        </div>`;
+      });
+    }
+    document.getElementById('albumsList').innerHTML=html;
+  }catch(e){console.error(e);}
+}
+
+window.selectAlbumFromMenu=async(id)=>{
+  try{
+    const {data:album}=await sb.from('albums').select('*').eq('id',id).single();
+    currentAlbum=album;
+    await loadStickers();
+    render();
+  }catch(e){toast('Erro ao carregar álbum');}
+};
 
 function render(){
   if(!user){renderAuth();return;}
@@ -462,6 +500,11 @@ function render(){
         else if(activeFilter==='repetidas')show=show&&repeated>0;
         t.style.display=show?'block':'none';
       });
+      // Esconde grupos vazios
+      document.querySelectorAll('.grp').forEach(grp=>{
+        const hasVisibleTeams=grp.querySelector('.team[style="display: block"], .team:not([style*="display: none"])');
+        grp.style.display=hasVisibleTeams?'block':'none';
+      });
     };
   }
   
@@ -479,6 +522,11 @@ function render(){
         if(filter==='faltam')show=show&&missing>0;
         else if(filter==='repetidas')show=show&&repeated>0;
         t.style.display=show?'block':'none';
+      });
+      // Esconde grupos vazios
+      document.querySelectorAll('.grp').forEach(grp=>{
+        const hasVisibleTeams=grp.querySelector('.team[style="display: block"], .team:not([style*="display: none"])');
+        grp.style.display=hasVisibleTeams?'block':'none';
       });
     };
   });
