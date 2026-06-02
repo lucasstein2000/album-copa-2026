@@ -262,6 +262,7 @@ async function renderHistory(){
     const userMap={};
     users.forEach(u=>userMap[u.id]=u.name||'Usuário');
     
+    // Agrupa por time
     const grouped={};
     logs.forEach(l=>{
       const code=l.sticker_code.split('-')[0];
@@ -270,11 +271,28 @@ async function renderHistory(){
     });
     
     let html='<h2>🕘 Histórico</h2>';
-    Object.entries(grouped).forEach(([code,items])=>{
+    
+    // Ordena por última mudança
+    const sorted=Object.entries(grouped).sort((a,b)=>
+      new Date(b[1][0].created_at)-new Date(a[1][0].created_at)
+    );
+    
+    sorted.forEach(([code,items])=>{
       const team=TEAMS.find(t=>t.code===code);
       const userName=userMap[items[0].user_id]||'?';
-      html+=`<div class="log-item"><div class="log-team">${code} - ${team?.name||'?'}</div>`;
-      html+=`<div class="log-info">${items.length} mudança${items.length>1?'s':''} por ${userName} • Última: ${new Date(items[0].created_at).toLocaleDateString('pt-BR')}</div></div>`;
+      const lastDate=new Date(items[0].created_at).toLocaleDateString('pt-BR');
+      const id=`hist-${code}`;
+      
+      html+=`<div style="margin-bottom:10px">
+        <div class="team-toggle" onclick="document.getElementById('${id}').style.display=document.getElementById('${id}').style.display==='none'?'block':'none';this.style.background=this.style.background==='rgba(244,196,48,.2)'?'rgba(0,0,0,.2)':'rgba(244,196,48,.2)'" style="cursor:pointer;padding:10px;background:rgba(244,196,48,.2);border-radius:6px;user-select:none;font-weight:700">
+          ${team?.flag||'?'} <strong>${code} - ${team?.name||'?'}</strong> (${items.length} mudança${items.length>1?'s':''}) por ${userName} • ${lastDate}
+        </div>
+        <div id="${id}" style="display:block;padding-left:12px;margin-top:6px">
+          ${items.map(log=>`<div style="padding:6px;background:rgba(0,0,0,.1);border-radius:4px;margin-bottom:4px;font-size:12px">
+            ${log.sticker_code} • ${log.action==='add'?'➕ Adicionou':'➖ Removeu'} • ${new Date(log.created_at).toLocaleString('pt-BR')}
+          </div>`).join('')}
+        </div>
+      </div>`;
     });
     
     document.getElementById('history').innerHTML=html;
