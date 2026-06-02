@@ -178,14 +178,22 @@ async function bump(code,n,dir){
   const nv=Math.max(0,(owned[k]||0)+dir);
   owned[k]=nv;
   
-  // Salva estado do filtro antes de render
+  // Salva estado do filtro e aba antes de render
   const activeFilter=document.querySelector('[data-filter].active')?.dataset.filter||'todas';
   const searchQuery=document.getElementById('searchTeam')?.value.toLowerCase()||'';
+  const activeTab=document.querySelector('.tab-btn.active')?.dataset.tab||'album';
   
   render();
   
-  // Restaura filtro
+  // Restaura aba e filtro
   setTimeout(()=>{
+    // Restaura aba
+    document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
+    document.querySelector(`[data-tab="${activeTab}"]`)?.classList.add('active');
+    document.querySelectorAll('.tab-content').forEach(c=>c.classList.remove('active'));
+    document.getElementById(activeTab)?.classList.add('active');
+    
+    // Restaura filtro
     document.querySelectorAll('[data-filter]').forEach(b=>b.classList.remove('active'));
     document.querySelector(`[data-filter="${activeFilter}"]`)?.classList.add('active');
     if(document.getElementById('searchTeam'))document.getElementById('searchTeam').value=searchQuery.toUpperCase();
