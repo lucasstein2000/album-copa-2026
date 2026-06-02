@@ -89,7 +89,7 @@ async function signup(email,password,name){
   try{
     const {data,error}=await sb.auth.signUp({email,password});
     if(error)throw error;
-    await sb.from('profiles').insert({id:data.user.id,name});
+    await sb.from('profiles').insert({id:data.user.id,name,email});
     user=data.user;
     await loadData();
     render();
@@ -188,17 +188,17 @@ async function inviteCollaborator(){
   const email=prompt('Email do colaborador:');
   if(!email)return;
   try{
-    const {data:users}=await sb.auth.admin.listUsers();
-    const user=users?.find(u=>u.user_metadata?.email===email||u.email===email);
-    if(!user){toast('Usuário não encontrado');return;}
-    const {error}=await sb.from('album_collaborators').insert({album_id:currentAlbum.id,user_id:user.id});
-    if(error)throw error;
-    toast('Colaborador adicionado!');
-    render();
-  }catch(e){
-    if(e.message.includes('duplicate')){toast('Já é colaborador');}
-    else{toast('Erro: '+e.message);}
-  }
+    const {data:profile}=await sb.from('profiles').select('id').eq('email',email).single();
+    if(!profile){toast('Usuário não encontrado');return;}
+    const {error}=await sb.from('album_collaborators').insert({album_id:currentAlbum.id,user_id:profile.id});
+    if(error){
+      if(error.message.includes('duplicate')||error.message.includes('violates')){toast('Já é colaborador');}
+      else throw error;
+    }else{
+      toast('Colaborador adicionado!');
+      render();
+    }
+  }catch(e){toast('Erro: Usuário não encontrado');}
 }
 
 async function removeCollaborator(userId){
