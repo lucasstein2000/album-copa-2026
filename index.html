@@ -183,8 +183,13 @@ async function bump(code,n,dir){
   if(cell){
     cell.classList.toggle('have',nv>0);
     cell.classList.toggle('rep',nv>1);
-    cell.textContent=nv>1?nv:'';
-    if(nv>1)cell.setAttribute('data-c',nv-1);
+    // Coloca o número original de volta, e atualiza data-c
+    cell.textContent=n;
+    if(nv>1){
+      cell.setAttribute('data-c',nv-1);
+    }else{
+      cell.removeAttribute('data-c');
+    }
   }
   
   try{
