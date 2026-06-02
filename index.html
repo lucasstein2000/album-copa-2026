@@ -23,14 +23,20 @@
 .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(50px,1fr));gap:5px}
 .cell{aspect-ratio:1;border-radius:7px;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;cursor:pointer;user-select:none;-webkit-user-select:none;background:var(--miss);position:relative;transition:transform .08s}
 .cell:hover{transform:translateY(-2px)}.cell.have{background:var(--have);color:#042}.cell.rep{background:var(--rep);color:#3a2c00}.cell.rep::after{content:"×"attr(data-c);position:absolute;top:-5px;right:-5px;background:var(--ink);color:var(--gold);font-size:9px;border-radius:9px;padding:1px 4px}
-button{font-family:'Space Mono',monospace;font-weight:700;border:none;border-radius:9px;padding:9px 13px;cursor:pointer;font-size:12px}.btn-gold{background:var(--gold);color:var(--ink)}.btn-sec{background:rgba(0,0,0,.22);color:var(--paper);border:1px solid var(--line)}
+button{font-family:'Space Mono',monospace;font-weight:700;border:none;border-radius:9px;padding:9px 13px;cursor:pointer;font-size:12px}.btn-gold{background:var(--gold);color:var(--ink)}.btn-sec{background:rgba(0,0,0,.22);color:var(--paper);border:1px solid var(--line)}.btn-danger{background:#c41e3a;color:var(--paper)}
 .note{font-size:11px;opacity:.5;margin-top:12px}input{background:rgba(0,0,0,.25);border:1px solid var(--line);color:var(--paper);border-radius:9px;padding:9px 11px;font-family:'Space Mono',monospace;font-size:13px}
 .log-item{background:rgba(0,0,0,.2);border:1px solid var(--line);border-radius:9px;padding:12px;margin:8px 0;font-size:12px}
 .log-team{font-weight:700;color:var(--gold);margin-bottom:4px}
-.log-info{opacity:.7}
+.log-info{opacity:.7;font-size:11px}
 .trade-box{background:rgba(31,174,90,.1);border:1px solid var(--have);border-radius:9px;padding:12px;margin:12px 0}
 .trade-box .user{font-weight:700;color:var(--gold);margin-bottom:8px}
 .trade-item{font-size:12px;margin:6px 0}
+.collab-item{background:rgba(0,0,0,.2);border:1px solid var(--line);border-radius:9px;padding:12px;margin:8px 0;display:flex;justify-content:space-between;align-items:center}
+.collab-name{font-weight:700}
+.album-item{background:rgba(0,0,0,.2);border:1px solid var(--line);border-radius:9px;padding:12px;margin:8px 0;cursor:pointer}
+.album-item:hover{background:rgba(0,0,0,.3)}
+.album-title{font-weight:700;color:var(--gold);margin-bottom:4px}
+.album-info{font-size:11px;opacity:.6}
 </style>
 </head>
 <body>
@@ -59,7 +65,7 @@ const TEAMS=[
   ['CC','Coca-Cola','CC',14],
 ].map(t=>({group:t[0],name:t[1],code:t[2],count:t[3]}));
 
-let sb, user=null, currentAlbum=null, owned={}, allUsers={}, allAlbums={};
+let sb, user=null, currentAlbum=null, owned={}, allUsers={}, allAlbums={}, allCollab={};
 const app=document.getElementById('app');
 
 function toast(m){
@@ -137,6 +143,20 @@ async function createAlbum(name){
   }catch(e){toast('Erro: '+e.message);}
 }
 
+async function deleteAlbum(){
+  if(!confirm('Tem certeza que quer deletar este álbum?'))return;
+  try{
+    await sb.from('sticker_log').delete().eq('album_id',currentAlbum.id);
+    await sb.from('stickers').delete().eq('album_id',currentAlbum.id);
+    await sb.from('album_collaborators').delete().eq('album_id',currentAlbum.id);
+    await sb.from('albums').delete().eq('id',currentAlbum.id);
+    currentAlbum=null;
+    owned={};
+    render();
+    toast('Álbum deletado!');
+  }catch(e){toast('Erro: '+e.message);}
+}
+
 async function bump(code,n,dir){
   const k=code+'-'+n;
   const nv=Math.max(0,(owned[k]||0)+dir);
@@ -145,7 +165,7 @@ async function bump(code,n,dir){
   try{
     if(nv===0)await sb.from('stickers').delete().eq('album_id',currentAlbum.id).eq('sticker_code',k);
     else await sb.from('stickers').upsert({album_id:currentAlbum.id,sticker_code:k,count:nv});
-    await sb.from('sticker_log').insert({album_id:currentAlbum.id,sticker_code:k,action:dir>0?'add':'remove'});
+    await sb.from('sticker_log').insert({album_id:currentAlbum.id,sticker_code:k,action:dir>0?'add':'remove',user_id:user.id});
   }catch(e){toast('Erro ao salvar');}
 }
 
@@ -157,6 +177,14 @@ async function inviteCollaborator(){
     if(!profile){toast('Usuário não encontrado');return;}
     await sb.from('album_collaborators').insert({album_id:currentAlbum.id,user_id:profile.id});
     toast('Colaborador adicionado!');
+    render();
+  }catch(e){toast('Erro: '+e.message);}
+}
+
+async function removeCollaborator(userId){
+  try{
+    await sb.from('album_collaborators').delete().eq('album_id',currentAlbum.id).eq('user_id',userId);
+    toast('Colaborador removido!');
     render();
   }catch(e){toast('Erro: '+e.message);}
 }
@@ -200,6 +228,9 @@ async function renderMarketplace(){
 async function renderHistory(){
   try{
     const {data:logs}=await sb.from('sticker_log').select('*').eq('album_id',currentAlbum.id).order('created_at',{ascending:false}).limit(500);
+    const {data:users}=await sb.from('profiles').select('*');
+    const userMap={};users.forEach(u=>userMap[u.id]=u.name);
+    
     const grouped={};
     (logs||[]).forEach(l=>{
       const code=l.sticker_code.split('-')[0];
@@ -211,12 +242,59 @@ async function renderHistory(){
     Object.entries(grouped).forEach(([code,items])=>{
       const team=TEAMS.find(t=>t.code===code);
       html+=`<div class="log-item"><div class="log-team">${code} - ${team?.name||'?'}</div>`;
-      html+=`<div class="log-info">${items.length} mudança${items.length>1?'s':''} • Última: ${new Date(items[0].created_at).toLocaleDateString('pt-BR')}</div></div>`;
+      html+=`<div class="log-info">${items.length} mudança${items.length>1?'s':''} por ${userMap[items[0].user_id]||'?'} • Última: ${new Date(items[0].created_at).toLocaleDateString('pt-BR')}</div></div>`;
     });
     
     document.getElementById('history').innerHTML=html||'<p style="opacity:.6">Sem histórico</p>';
   }catch(e){console.error(e);}
 }
+
+async function renderAlbums(){
+  try{
+    const {data:owned}=await sb.from('albums').select('*').eq('owner_id',user.id);
+    const {data:collab}=await sb.from('album_collaborators').select('album_id').eq('user_id',user.id);
+    const collabIds=collab?collab.map(c=>c.album_id):[];
+    let allAlbumsData=[...(owned||[])];
+    if(collabIds.length>0){
+      const {data:collabAlbums}=await sb.from('albums').select('*').in('id',collabIds);
+      allAlbumsData=[...allAlbumsData,...(collabAlbums||[])];
+    }
+    
+    let html='<h2>Meus Álbuns</h2>';
+    allAlbumsData.forEach(a=>{
+      const isOwner=a.owner_id===user.id;
+      html+=`<div class="album-item" onclick="selectAlbum('${a.id}')">
+        <div class="album-title">${a.name} ${isOwner?'(dono)':'(colaborador)'}</div>
+        <div class="album-info">Criado em ${new Date(a.created_at).toLocaleDateString('pt-BR')}</div>
+      </div>`;
+    });
+    
+    document.getElementById('albums').innerHTML=html;
+  }catch(e){console.error(e);}
+}
+
+async function renderCollaborators(){
+  try{
+    const {data:collab}=await sb.from('album_collaborators').select('user_id').eq('album_id',currentAlbum.id);
+    const {data:users}=await sb.from('profiles').select('*').in('id',collab.map(c=>c.user_id));
+    
+    let html='<h2>👥 Colaboradores</h2>';
+    users.forEach(u=>{
+      html+=`<div class="collab-item">
+        <div class="collab-name">${u.name}</div>
+        <button class="btn-danger" style="padding:6px 10px;font-size:11px" onclick="removeCollab('${u.id}')">Remover</button>
+      </div>`;
+    });
+    
+    document.getElementById('collab').innerHTML=html;
+  }catch(e){console.error(e);}
+}
+
+window.removeCollab=(id)=>removeCollaborator(id);
+window.selectAlbum=(id)=>{
+  currentAlbum={id};
+  loadData();
+};
 
 function totals(){
   let o=0,total=0;
@@ -278,16 +356,20 @@ function render(){
   const {owned:o,total}=totals();
   const pct=total?Math.round(o/total*100):0;
   const groups=[...new Set(TEAMS.map(t=>t.group))];
+  const isOwner=currentAlbum.owner_id===user.id;
   
   let html=`<h1>Álbum <span class="acc">Copa 2026</span></h1>
     <div class="sub">${currentAlbum.name}</div>
     <button class="btn-sec" style="margin-bottom:8px;margin-right:8px" id="logoutBtn">Logout</button>
+    <button class="btn-sec" style="margin-bottom:8px;margin-right:8px" id="backBtn">← Álbuns</button>
     <button class="btn-sec" style="margin-bottom:8px" id="inviteBtn">👥 Adicionar</button>
+    ${isOwner?'<button class="btn-danger" style="margin-bottom:8px" id="deleteBtn">🗑️ Deletar</button>':''}
     
     <div class="tabs">
       <button class="tab-btn active" data-tab="album">📊 Álbum</button>
       <button class="tab-btn" data-tab="market">🔄 Trocas</button>
       <button class="tab-btn" data-tab="history">🕘 Histórico</button>
+      ${isOwner?'<button class="tab-btn" data-tab="collab">👥 Colaboradores</button>':''}
     </div>
     
     <div id="album" class="tab-content active">
@@ -317,12 +399,15 @@ function render(){
     
     <div id="market" class="tab-content"><p style="opacity:.6">Carregando trocas…</p></div>
     <div id="history" class="tab-content"><p style="opacity:.6">Carregando histórico…</p></div>
+    ${isOwner?'<div id="collab" class="tab-content"><p style="opacity:.6">Carregando…</p></div>':''}
   `;
   
   app.innerHTML=html;
   
   document.getElementById('logoutBtn').onclick=logout;
+  document.getElementById('backBtn').onclick=()=>{currentAlbum=null;render();};
   document.getElementById('inviteBtn').onclick=inviteCollaborator;
+  if(isOwner)document.getElementById('deleteBtn').onclick=deleteAlbum;
   
   document.querySelectorAll('.tab-btn').forEach(b=>b.onclick=()=>{
     document.querySelectorAll('.tab-btn').forEach(x=>x.classList.remove('active'));
@@ -331,6 +416,7 @@ function render(){
     document.getElementById(b.dataset.tab).classList.add('active');
     if(b.dataset.tab==='market')renderMarketplace();
     if(b.dataset.tab==='history')renderHistory();
+    if(b.dataset.tab==='collab')renderCollaborators();
   });
   
   let touchStart=null;
