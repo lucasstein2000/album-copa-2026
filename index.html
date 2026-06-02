@@ -1,0 +1,337 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=5, viewport-fit=cover">
+<title>Álbum Copa 2026 — Múltiplos Usuários</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,800..900&family=Space+Mono:wght@400;700&display=swap');
+  :root{--pitch-dk:#043d1c;--gold:#f4c430;--ink:#0c1b12;--paper:#f5f3ea;--line:rgba(255,255,255,.16);
+    --have:#1fae5a;--rep:#f4c430;--miss:rgba(255,255,255,.09);}
+  *{box-sizing:border-box}
+  body{margin:0;font-family:'Space Mono',monospace;color:var(--paper);
+    background:radial-gradient(circle at 50% -10%,rgba(244,196,48,.12),transparent 45%),linear-gradient(160deg,var(--pitch-dk),#043d1c 60%,#022a13);
+    min-height:100vh;padding:16px}
+  #app{max-width:820px;margin:0 auto}
+  .loading{text-align:center;padding:40px;opacity:.6}
+  h1{font-family:'Bricolage Grotesque',sans-serif;font-weight:900;font-size:clamp(24px,6vw,36px);line-height:.95;margin:0 0 2px;letter-spacing:-1px}
+  h1 .acc{color:var(--gold)}
+  .sub{font-size:11px;opacity:.55;letter-spacing:1px;text-transform:uppercase;margin-bottom:14px}
+  .auth-box{background:rgba(0,0,0,.3);border:1px solid var(--line);border-radius:12px;padding:20px;max-width:400px;margin:60px auto}
+  .auth-box h2{font-family:'Bricolage Grotesque',sans-serif;color:var(--gold);margin:0 0 14px}
+  .auth-box input{width:100%;margin:8px 0;background:rgba(0,0,0,.3);border:1px solid var(--line);color:var(--paper);border-radius:8px;padding:11px;font-family:'Space Mono',monospace;font-size:13px}
+  .auth-box button{width:100%;margin-top:12px;background:var(--gold);color:var(--ink);border:none;border-radius:8px;padding:11px;font-weight:700;cursor:pointer}
+  .auth-box button:hover{filter:brightness(.95)}
+  .auth-box .toggle{font-size:12px;opacity:.7;margin-top:12px;text-align:center}
+  .auth-box .toggle a{color:var(--gold);cursor:pointer;text-decoration:underline}
+  .tabs{display:flex;gap:8px;margin:16px 0;flex-wrap:wrap}
+  .tabs button{background:rgba(0,0,0,.22);border:1px solid var(--line);color:var(--paper);border-radius:8px;padding:9px 13px;cursor:pointer;font-family:'Space Mono',monospace;font-weight:700;font-size:12px}
+  .tabs button.active{background:var(--gold);color:var(--ink)}
+  .tab-content{display:none}
+  .tab-content.active{display:block}
+  .top{display:flex;gap:10px;align-items:center;margin:12px 0;flex-wrap:wrap}
+  .tot{font-family:'Bricolage Grotesque',sans-serif;font-weight:900;font-size:20px}
+  .tot small{font-size:12px;opacity:.6}
+  .bar{flex:1;min-width:120px;height:9px;border-radius:6px;background:rgba(0,0,0,.3);overflow:hidden}
+  .bar>span{display:block;height:100%;background:linear-gradient(90deg,var(--have),var(--gold));transition:width .4s}
+  .row{display:flex;gap:8px;margin:12px 0;flex-wrap:wrap}
+  input,select{background:rgba(0,0,0,.25);border:1px solid var(--line);color:var(--paper);border-radius:9px;padding:9px 11px;font-family:'Space Mono',monospace;font-size:13px}
+  input::placeholder{color:rgba(245,243,234,.4)}
+  input.search{flex:1;min-width:140px}
+  button{font-family:'Space Mono',monospace;font-weight:700;border:none;border-radius:9px;padding:9px 13px;cursor:pointer;font-size:12px;transition:transform .1s,filter .15s}
+  button:active{transform:scale(.96)} button:hover{filter:brightness(1.08)}
+  .btn-gold{background:var(--gold);color:var(--ink)}
+  .btn-sec{background:rgba(0,0,0,.22);color:var(--paper);border:1px solid var(--line)}
+  .grp{margin-top:18px}
+  .grp-h{font-family:'Bricolage Grotesque',sans-serif;font-weight:800;font-size:13px;text-transform:uppercase;letter-spacing:2px;opacity:.7;border-bottom:1px solid var(--line);padding-bottom:5px;margin-bottom:12px}
+  .team{margin-bottom:14px}
+  .team-h{display:flex;align-items:center;gap:9px;margin-bottom:7px}
+  .badge{background:var(--gold);color:var(--ink);font-weight:700;font-size:11px;padding:2px 7px;border-radius:5px;letter-spacing:.5px}
+  .team-name{font-weight:700;font-size:14px}
+  .team-prog{font-size:11px;opacity:.6;margin-left:auto}
+  .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(50px,1fr));gap:5px}
+  .cell{aspect-ratio:1;border-radius:7px;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;cursor:pointer;user-select:none;background:var(--miss);position:relative;transition:transform .08s}
+  .cell:hover{transform:translateY(-2px)}
+  .cell.have{background:var(--have);color:#042}
+  .cell.rep{background:var(--rep);color:#3a2c00}
+  .cell.rep::after{content:"×"attr(data-c);position:absolute;top:-5px;right:-5px;background:var(--ink);color:var(--gold);font-size:9px;border-radius:9px;padding:1px 4px}
+  .album-card{background:rgba(0,0,0,.2);border:1px solid var(--line);border-radius:12px;padding:14px;margin-bottom:12px}
+  .album-card h3{margin:0 0 8px;font-family:'Bricolage Grotesque',sans-serif;color:var(--gold)}
+  .album-card .info{font-size:11px;opacity:.6;margin-bottom:8px}
+  .album-card .actions{display:flex;gap:6px;flex-wrap:wrap}
+  .album-card .actions button{font-size:11px;padding:6px 10px}
+  .modal{position:fixed;inset:0;background:rgba(0,0,0,.6);display:flex;align-items:center;justify-content:center;z-index:100;padding:16px}
+  .modal-box{background:var(--pitch-dk);border:1px solid var(--gold);border-radius:14px;padding:18px;max-width:500px;width:100%}
+  .modal-box h3{font-family:'Bricolage Grotesque',sans-serif;margin:0 0 12px;color:var(--gold)}
+  .modal-box input,.modal-box textarea{width:100%;margin:8px 0;background:rgba(0,0,0,.3);border:1px solid var(--line);color:var(--paper);border-radius:9px;padding:11px;font-family:'Space Mono',monospace;font-size:12px}
+  .modal-box textarea{min-height:100px}
+  .modal-actions{display:flex;gap:8px;margin-top:12px;justify-content:flex-end}
+  .toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:var(--ink);color:var(--gold);padding:10px 18px;border-radius:10px;font-size:13px;border:1px solid var(--gold);opacity:0;transition:opacity .3s;pointer-events:none;z-index:120}
+  .toast.show{opacity:1}
+  .marketplace-item{background:rgba(0,0,0,.2);border:1px solid var(--line);border-radius:10px;padding:12px;margin-bottom:12px}
+  .marketplace-item .user{font-weight:700;color:var(--gold);margin-bottom:6px}
+  .marketplace-item .dups{font-size:12px;line-height:1.6}
+  .match-box{background:rgba(31,174,90,.1);border:1px solid var(--have);border-radius:10px;padding:12px;margin:8px 0}
+  .match-box .trade{font-size:12px;margin:4px 0}
+  .match-box .you{color:var(--have);font-weight:700}
+  .match-box .them{color:var(--gold)}
+  .legend{display:flex;gap:14px;margin-top:14px;font-size:11px;opacity:.7;flex-wrap:wrap}
+  .legend span{display:flex;align-items:center;gap:5px}
+  .dot{width:11px;height:11px;border-radius:3px;display:inline-block}
+  .note{font-size:11px;opacity:.5;margin-top:12px;line-height:1.6}
+  details summary::-webkit-details-marker{display:none}
+  details summary::before{content:"▸";margin-right:4px;opacity:.6;transition:transform .15s;display:inline-block}
+  details[open] summary::before{content:"▾"}
+</style>
+</head>
+<body>
+<div id="app"><div class="loading">Carregando…</div></div>
+
+<script type="module">
+import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm';
+
+const SUPABASE_URL = "https://fektmbitypzwsgfiriyk.supabase.co";
+const SUPABASE_KEY = "sb_publishable_qIXLVOOYRI4oi129YzR9dw_I-8cuW_V";
+const ADMIN_EMAIL = "lucasstein2000@gmail.com";
+
+const TEAMS=[
+  ['FWC','Abertura · FIFA World Cup History','FWC',20],
+  ['A','México','MEX',20],['A','África do Sul','RSA',20],['A','Coreia do Sul','KOR',20],['A','Rep. Tcheca','CZE',20],
+  ['B','Canadá','CAN',20],['B','Bósnia','BIH',20],['B','Catar','QAT',20],['B','Suíça','SUI',20],
+  ['C','Brasil','BRA',20],['C','Marrocos','MAR',20],['C','Haiti','HAI',20],['C','Escócia','SCO',20],
+  ['D','Estados Unidos','USA',20],['D','Paraguai','PAR',20],['D','Austrália','AUS',20],['D','Turquia','TUR',20],
+  ['E','Alemanha','GER',20],['E','Curaçao','CUW',20],['E','Costa do Marfim','CIV',20],['E','Equador','ECU',20],
+  ['F','Holanda','NED',20],['F','Japão','JPN',20],['F','Suécia','SWE',20],['F','Tunísia','TUN',20],
+  ['G','Bélgica','BEL',20],['G','Egito','EGY',20],['G','Irã','IRN',20],['G','Nova Zelândia','NZL',20],
+  ['H','Espanha','ESP',20],['H','Cabo Verde','CPV',20],['H','Arábia Saudita','KSA',20],['H','Uruguai','URU',20],
+  ['I','França','FRA',20],['I','Senegal','SEN',20],['I','Iraque','IRQ',20],['I','Noruega','NOR',20],
+  ['J','Argentina','ARG',20],['J','Argélia','ALG',20],['J','Áustria','AUT',20],['J','Jordânia','JOR',20],
+  ['K','Portugal','POR',20],['K','Congo','COD',20],['K','Uzbequistão','UZB',20],['K','Colômbia','COL',20],
+  ['L','Inglaterra','ENG',20],['L','Croácia','CRO',20],['L','Gana','GHA',20],['L','Panamá','PAN',20],
+  ['CC','Coca-Cola (promo)','CC',14],
+].map((t,i)=>({group:t[0],name:t[1],code:t[2],count:t[3]}));
+
+let sb, user=null, currentAlbum=null, owned={}, allUsers={}, allAlbums={};
+const app=document.getElementById('app');
+
+function toast(m){let t=document.querySelector('.toast');if(!t){t=document.createElement('div');t.className='toast';document.body.appendChild(t);}t.textContent=m;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),1700);}
+
+async function init(){
+  sb=createClient(SUPABASE_URL,SUPABASE_KEY);
+  const {data:{session}}=await sb.auth.getSession();
+  if(session) {user=session.user; await loadProfile(); await loadAlbums();}
+  else renderAuth();
+}
+
+async function signup(email,password,name){
+  try{
+    const {data,error}=await sb.auth.signUp({email,password});
+    if(error)throw error;
+    await sb.from('profiles').insert({id:data.user.id,name});
+    user=data.user;
+    await loadProfile();
+    await loadAlbums();
+    render();
+  }catch(e){toast('Erro no signup: '+e.message);}
+}
+
+async function login(email,password){
+  try{
+    const {data,error}=await sb.auth.signInWithPassword({email,password});
+    if(error)throw error;
+    user=data.user;
+    await loadProfile();
+    await loadAlbums();
+    render();
+  }catch(e){toast('Erro no login: '+e.message);}
+}
+
+async function logout(){
+  await sb.auth.signOut();
+  user=null;
+  currentAlbum=null;
+  owned={};
+  renderAuth();
+}
+
+async function loadProfile(){
+  const {data}=await sb.from('profiles').select('name').eq('id',user.id).single();
+  if(!data) await sb.from('profiles').insert({id:user.id,name:'Usuário'});
+}
+
+async function loadAlbums(){
+  const {data}=await sb.from('albums').select('*').or(`owner_id.eq.${user.id},id.in(select album_id from album_collaborators where user_id='${user.id}')`);
+  currentAlbum=data&&data[0]?data[0]:null;
+  if(currentAlbum) await loadStickers();
+}
+
+async function loadStickers(){
+  const {data}=await sb.from('stickers').select('*').eq('album_id',currentAlbum.id);
+  owned={};
+  (data||[]).forEach(r=>{if(r.count>0)owned[r.sticker_code]=r.count;});
+  subscribeToStickers();
+}
+
+function subscribeToStickers(){
+  sb.channel('album-'+currentAlbum.id).on('postgres_changes',{event:'*',schema:'public',table:'stickers',filter:'album_id=eq.'+currentAlbum.id},p=>{
+    const r=p.new||p.old;
+    if(!r)return;
+    if(p.eventType==='DELETE')delete owned[r.sticker_code];
+    else owned[r.sticker_code]=r.count;
+    render();
+  }).subscribe();
+}
+
+async function createAlbum(name){
+  try{
+    const {data,error}=await sb.from('albums').insert({owner_id:user.id,name}).select().single();
+    if(error)throw error;
+    currentAlbum=data;
+    owned={};
+    render();
+    toast('Álbum criado!');
+  }catch(e){toast('Erro: '+e.message);}
+}
+
+async function bump(code,n,dir){
+  const k=code+'-'+n;
+  const nv=Math.max(0,(owned[k]||0)+dir);
+  owned[k]=nv;
+  render();
+  try{
+    if(nv===0)await sb.from('stickers').delete().eq('album_id',currentAlbum.id).eq('sticker_code',k);
+    else await sb.from('stickers').upsert({album_id:currentAlbum.id,sticker_code:k,count:nv});
+    await sb.from('sticker_log').insert({album_id:currentAlbum.id,sticker_code:k,action:dir>0?'add':'remove'});
+  }catch(e){toast('Offline: marcou aqui só');}
+}
+
+async function importOldData(){
+  if(user.email!==ADMIN_EMAIL){toast('Só o admin pode importar');return;}
+  try{
+    const {data:old}=await sb.from('stickers').select('sticker_code,count').eq('album_id','albumcopa2026');
+    if(!old||!old.length){toast('Nenhum dado antigo');return;}
+    await Promise.all(old.map(r=>sb.from('stickers').upsert({album_id:currentAlbum.id,sticker_code:r.sticker_code,count:r.count})));
+    await loadStickers();
+    toast('Dados importados!');
+  }catch(e){toast('Erro na importação');}
+}
+
+function totals(){let o=0,total=0;TEAMS.forEach(t=>{if(t.code==='CC')return;total+=t.count;for(let i=1;i<=t.count;i++)if(owned[t.code+'-'+i])o++;});return{owned:o,total};}
+
+async function loadMarketplace(){
+  const {data:users}=await sb.from('profiles').select('*');
+  const {data:albums}=await sb.from('albums').select('*');
+  const {data:collab}=await sb.from('album_collaborators').select('*');
+  
+  allUsers={};users.forEach(u=>allUsers[u.id]=u);
+  allAlbums={};albums.forEach(a=>allAlbums[a.id]={...a,collab:collab.filter(c=>c.album_id===a.id)});
+}
+
+async function renderAuth(){
+  app.innerHTML=`<div class="auth-box">
+    <h2 id="mode">Login</h2>
+    <input id="email" type="email" placeholder="Email">
+    <input id="pass" type="password" placeholder="Senha">
+    <input id="name" type="text" placeholder="Seu nome" style="display:none">
+    <button id="submit">Entrar</button>
+    <div class="toggle">Novo por aqui? <a id="toggle">Criar conta</a></div>
+  </div>`;
+  
+  let isSignup=false;
+  const $=(s)=>document.getElementById(s);
+  $('toggle').onclick=()=>{isSignup=!isSignup;$('mode').textContent=isSignup?'Criar conta':'Login';$('name').style.display=isSignup?'block':'none';};
+  $('submit').onclick=()=>{const e=$('email').value,p=$('pass').value;if(isSignup){const n=$('name').value;if(!n){toast('Nome obrigatório');return;}signup(e,p,n);}else login(e,p);};
+}
+
+function render(){
+  if(!user){renderAuth();return;}
+  if(!currentAlbum){renderAlbumList();return;}
+  
+  const {owned:o,total}=totals();const pct=total?Math.round(o/total*100):0;
+  const groups=[...new Set(TEAMS.map(t=>t.group))];
+  
+  let html=`<h1>Álbum <span class="acc">Copa 2026</span></h1>
+    <div class="sub">${currentAlbum.name}</div>
+    <div class="tabs">
+      <button class="tab-btn active" data-tab="album">📊 Meu Álbum</button>
+      <button class="tab-btn" data-tab="market">🔄 Mercado</button>
+      <button class="tab-btn" data-tab="settings">⚙️ Configurações</button>
+      ${user.email===ADMIN_EMAIL?'<button class="tab-btn" data-tab="admin">🔧 Admin</button>':''}
+    </div>
+    
+    <div id="album" class="tab-content active">
+      <div class="top"><div class="tot">${o}<small>/${total} · ${pct}%</small></div><div class="bar"><span style="width:${pct}%"></span></div></div>
+      ${groups.map(g=>{
+        const tg=TEAMS.filter(t=>t.group===g);
+        return `<div class="grp"><div class="grp-h">${g==='FWC'?'★ Abertura':g==='CC'?'◎ Coca-Cola':'Grupo '+g}</div>
+          ${tg.map(t=>{
+            let have=0;for(let i=1;i<=t.count;i++)if(owned[t.code+'-'+i])have++;
+            return `<div class="team"><div class="team-h"><span class="badge">${t.code}</span><span class="team-name">${t.name}</span><span class="team-prog">${have}/${t.count}</span></div>
+              <div class="grid">${Array.from({length:t.count},(_,i)=>{const c=owned[t.code+'-'+(i+1)]||0;const cls=c>1?'rep':c===1?'have':'miss';return `<div class="cell ${cls}" data-code="${t.code}" data-n="${i+1}" ${c>1?`data-c="${c-1}"`:''}>${i+1}</div>`;}).join('')}</div></div>`;
+          }).join('')}</div>`;
+      }).join('')}
+    </div>
+    
+    <div id="market" class="tab-content"><p style="opacity:.6">Carregando mercado…</p></div>
+    <div id="settings" class="tab-content"><p>Configurações aqui</p></div>
+    ${user.email===ADMIN_EMAIL?'<div id="admin" class="tab-content"><button class="btn-gold" id="importBtn">Importar dados antigos</button></div>':''}
+  `;
+  
+  app.innerHTML=html;
+  
+  document.querySelectorAll('.tab-btn').forEach(b=>b.onclick=()=>{
+    document.querySelectorAll('.tab-btn').forEach(x=>x.classList.remove('active'));
+    document.querySelectorAll('.tab-content').forEach(x=>x.classList.remove('active'));
+    b.classList.add('active');
+    document.getElementById(b.dataset.tab).classList.add('active');
+    if(b.dataset.tab==='market')renderMarket();
+  });
+  
+  document.querySelectorAll('.cell').forEach(c=>{
+    const code=c.dataset.code,n=+c.dataset.n;
+    c.onclick=()=>bump(code,n,+1);
+    c.oncontextmenu=e=>{e.preventDefault();bump(code,n,-1);};
+  });
+  
+  const importBtn=document.getElementById('importBtn');
+  if(importBtn)importBtn.onclick=importOldData;
+}
+
+async function renderMarket(){
+  await loadMarketplace();
+  const myStickers=Object.keys(owned).filter(k=>owned[k]>1).map(k=>({code:k.split('-')[0],num:+k.split('-')[1],count:owned[k]}));
+  
+  let html='<div>';
+  Object.values(allAlbums).forEach(album=>{
+    if(album.id===currentAlbum.id)return;
+    (async()=>{
+      const {data:sticks}=await sb.from('stickers').select('*').eq('album_id',album.id);
+      const dups=(sticks||[]).filter(s=>s.count>1).map(s=>s.sticker_code);
+      const owner=allUsers[album.owner_id];
+      if(dups.length){
+        const matches=myStickers.filter(m=>dups.includes(m.code+'-'+m.num));
+        html+=`<div class="marketplace-item"><div class="user">${owner.name} — ${album.name}</div>
+          <div class="dups">Repetidas: ${dups.join(', ')}</div>`;
+        if(matches.length)html+=`<div class="match-box"><div class="you">Você pode trocar:</div>${matches.map(m=>`<div class="trade">• <span class="you">${m.code} ${m.num}</span> pelos repetidos dele</div>`).join('')}</div>`;
+        html+=`</div>`;
+      }
+    })();
+  });
+  html+='</div>';
+  document.getElementById('market').innerHTML=html;
+}
+
+function renderAlbumList(){
+  let html=`<h1>Meus <span class="acc">Álbuns</span></h1>
+    <button class="btn-gold" id="newBtn">+ Novo Álbum</button><div id="albumList"></div>`;
+  app.innerHTML=html;
+  document.getElementById('newBtn').onclick=()=>{
+    const name=prompt('Nome do álbum:');
+    if(name)createAlbum(name);
+  };
+}
+
+init();
+</script>
+</body>
+</html>
