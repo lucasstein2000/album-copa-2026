@@ -620,6 +620,31 @@ function exportPDF(){
   }catch(e){toast('Erro ao gerar PDF');}
 }
 
+function applyFilters(filter,query){
+  document.querySelectorAll('.cell').forEach(c=>{
+    const team=c.closest('.team').dataset.team;
+    const isMissing=+c.dataset.missing;
+    const isRepeated=+c.dataset.repeated;
+    let show=true;
+    if(query)show=team.includes(query);
+    if(filter==='faltam')show=show&&isMissing;
+    else if(filter==='repetidas')show=show&&isRepeated;
+    c.classList.toggle('hidden',!show);
+  });
+  
+  // Oculta teams vazios
+  document.querySelectorAll('.team').forEach(team=>{
+    const hasVisibleCells=team.querySelector('.cell:not(.hidden)');
+    team.classList.toggle('hidden',!hasVisibleCells);
+  });
+  
+  // Oculta grupos vazios
+  document.querySelectorAll('.grp').forEach(grp=>{
+    const hasVisibleTeams=grp.querySelector('.team:not(.hidden)');
+    grp.classList.toggle('hidden',!hasVisibleTeams);
+  });
+}
+
 function render(){
   if(!user){renderAuth();return;}
   if(!currentAlbum){renderAlbumList();return;}
@@ -736,31 +761,6 @@ function render(){
       applyFilters(filter,query);
     };
   });
-  
-  function applyFilters(filter,query){
-    document.querySelectorAll('.cell').forEach(c=>{
-      const team=c.closest('.team').dataset.team;
-      const isMissing=+c.dataset.missing;
-      const isRepeated=+c.dataset.repeated;
-      let show=true;
-      if(query)show=team.includes(query);
-      if(filter==='faltam')show=show&&isMissing;
-      else if(filter==='repetidas')show=show&&isRepeated;
-      c.classList.toggle('hidden',!show);
-    });
-    
-    // Oculta teams vazios
-    document.querySelectorAll('.team').forEach(team=>{
-      const hasVisibleCells=team.querySelector('.cell:not(.hidden)');
-      team.classList.toggle('hidden',!hasVisibleCells);
-    });
-    
-    // Oculta grupos vazios
-    document.querySelectorAll('.grp').forEach(grp=>{
-      const hasVisibleTeams=grp.querySelector('.team:not(.hidden)');
-      grp.classList.toggle('hidden',!hasVisibleTeams);
-    });
-  }
   
   let totalMissing=0,totalRepeated=0;
   document.querySelectorAll('.cell').forEach(c=>{
