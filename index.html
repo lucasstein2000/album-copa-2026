@@ -121,9 +121,18 @@ function toast(m){let t=document.querySelector('.toast');if(!t){t=document.creat
 
 async function init(){
   sb=createClient(SUPABASE_URL,SUPABASE_KEY);
-  const {data:{session}}=await sb.auth.getSession();
-  if(session) {user=session.user; await loadProfile(); await loadAlbums();}
-  else renderAuth();
+  try{
+    const {data:{session}}=await sb.auth.getSession();
+    if(session) {
+      user=session.user; 
+      await loadProfile(); 
+      await loadAlbums();
+    }
+    render();
+  }catch(e){
+    console.error('Erro na inicialização:',e);
+    render();
+  }
 }
 
 async function signup(email,password,name){
@@ -163,9 +172,18 @@ async function loadProfile(){
 }
 
 async function loadAlbums(){
-  const {data}=await sb.from('albums').select('*').or(`owner_id.eq.${user.id},id.in(select album_id from album_collaborators where user_id='${user.id}')`);
-  currentAlbum=data&&data[0]?data[0]:null;
-  if(currentAlbum) await loadStickers();
+  try{
+    const {data:owned}=await sb.from('albums').select('*').eq('owner_id',user.id);
+    const {data:collab}=await sb.from('album_collaborators').select('album_id').eq('user_id',user.id);
+    const collabIds=collab?collab.map(c=>c.album_id):[];
+    const allAlbumsData=[...(owned||[])];
+    if(collabIds.length>0){
+      const {data:collabAlbums}=await sb.from('albums').select('*').in('id',collabIds);
+      allAlbumsData.push(...(collabAlbums||[]));
+    }
+    currentAlbum=allAlbumsData&&allAlbumsData[0]?allAlbumsData[0]:null;
+    if(currentAlbum) await loadStickers();
+  }catch(e){console.error('Erro ao carregar álbuns:',e);currentAlbum=null;}
 }
 
 async function loadStickers(){
