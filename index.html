@@ -226,6 +226,7 @@ function renderAuth(){
     <input id="name" type="text" placeholder="Seu nome" style="display:none">
     <button id="submit">Entrar</button>
     <div class="toggle">Novo? <a id="toggle">Criar conta</a></div>
+    <div class="toggle">Esqueceu? <a id="forgot">Reset senha</a></div>
   </div>`;
   
   document.getElementById('toggle').onclick=()=>{
@@ -241,6 +242,11 @@ function renderAuth(){
       if(!n){toast('Nome obrigatório');return;}
       signup(e,p,n);
     }else login(e,p);
+  };
+  document.getElementById('forgot').onclick=()=>{
+    const email=prompt('Digite seu email:');
+    if(!email){toast('Email obrigatório');return;}
+    sb.auth.resetPasswordForEmail(email).then(()=>toast('Link enviado!')).catch(e=>toast('Erro: '+e.message));
   };
 }
 
