@@ -185,12 +185,10 @@ async function bump(code,n,dir){
 }
 
 async function inviteCollaborator(){
-  const email=prompt('Email do colaborador:');
-  if(!email)return;
+  const userId=prompt('ID do colaborador (peça para ele clicar no perfil):');
+  if(!userId)return;
   try{
-    const {data:profile}=await sb.from('profiles').select('id').eq('email',email).single();
-    if(!profile){toast('Usuário não encontrado');return;}
-    const {error}=await sb.from('album_collaborators').insert({album_id:currentAlbum.id,user_id:profile.id});
+    const {error}=await sb.from('album_collaborators').insert({album_id:currentAlbum.id,user_id:userId});
     if(error){
       if(error.message.includes('duplicate')||error.message.includes('violates')){toast('Já é colaborador');}
       else throw error;
@@ -198,7 +196,7 @@ async function inviteCollaborator(){
       toast('Colaborador adicionado!');
       render();
     }
-  }catch(e){toast('Erro: Usuário não encontrado');}
+  }catch(e){toast('Erro: ID inválido');}
 }
 
 async function removeCollaborator(userId){
@@ -495,6 +493,7 @@ function render(){
   let html=`<h1>Álbum <span class="acc">Copa 2026</span></h1>
     <div class="sub">${currentAlbum.name} <a id="editBtn" style="color:var(--gold);cursor:pointer;font-size:11px;opacity:.7">✏️</a></div>
     <button class="btn-sec" style="margin-bottom:8px;margin-right:8px" id="logoutBtn">Logout</button>
+    <button class="btn-sec" style="margin-bottom:8px;margin-right:8px" id="idBtn">📋 Meu ID</button>
     <button class="btn-sec" style="margin-bottom:8px;margin-right:8px" id="backBtn">← Álbuns</button>
     <button class="btn-sec" style="margin-bottom:8px" id="inviteBtn">👥 Adicionar</button>
     ${isOwner?'<button class="btn-danger" style="margin-bottom:8px" id="deleteBtn">🗑️ Deletar</button>':''}
@@ -562,6 +561,7 @@ function render(){
   app.innerHTML=html;
   
   document.getElementById('logoutBtn').onclick=logout;
+  document.getElementById('idBtn').onclick=()=>{alert('Seu ID:\n\n'+user.id);};
   document.getElementById('backBtn').onclick=()=>{currentAlbum=null;render();};
   document.getElementById('inviteBtn').onclick=inviteCollaborator;
   document.getElementById('editBtn').onclick=editAlbumName;
