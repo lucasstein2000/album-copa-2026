@@ -184,7 +184,7 @@ async function bump(code,n,dir){
     cell.classList.toggle('have',nv>0);
     cell.classList.toggle('rep',nv>1);
     cell.textContent=n;
-    // Atualiza os data attributes para filtro
+    // Atualiza os data attributes para filtro (mas não reaplica ainda)
     cell.setAttribute('data-missing',nv===0?'1':'0');
     cell.setAttribute('data-repeated',nv>1?'1':'0');
     if(nv>1){
@@ -192,11 +192,6 @@ async function bump(code,n,dir){
     }else{
       cell.removeAttribute('data-c');
     }
-    
-    // Reaplica filtro pra esconder/mostrar
-    const activeFilter=document.querySelector('[data-filter].active')?.dataset.filter||'todas';
-    const searchQuery=document.getElementById('searchTeam')?.value.toLowerCase()||'';
-    applyFilters(activeFilter,searchQuery);
   }
   
   try{
@@ -787,6 +782,12 @@ function render(){
     document.querySelectorAll('.tab-content').forEach(x=>x.classList.remove('active'));
     b.classList.add('active');
     document.getElementById(b.dataset.tab).classList.add('active');
+    if(b.dataset.tab==='album'){
+      // Reaplica filtro ao voltar pra aba Álbum
+      const activeFilter=document.querySelector('[data-filter].active')?.dataset.filter||'todas';
+      const searchQuery=document.getElementById('searchTeam')?.value.toLowerCase()||'';
+      applyFilters(activeFilter,searchQuery);
+    }
     if(b.dataset.tab==='lista')renderLista();
     if(b.dataset.tab==='market')renderMarketplace();
     if(b.dataset.tab==='history')renderHistory();
