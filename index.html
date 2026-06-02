@@ -40,7 +40,7 @@ button{font-family:'Space Mono',monospace;font-weight:700;border:none;border-rad
 .album-info{font-size:11px;opacity:.6}
 .list-box{background:rgba(0,0,0,.2);border:1px solid var(--line);border-radius:9px;padding:12px;margin:12px 0}
 .list-title{font-weight:700;color:var(--gold);margin-bottom:8px;font-size:13px}
-.list-item{font-size:12px;padding:8px;opacity:.8;background:rgba(0,0,0,.2);margin:4px 0;border-radius:6px}
+.list-item{font-size:13px;padding:6px 8px;opacity:.85;background:rgba(0,0,0,.15);margin:3px 0;border-radius:6px;line-height:1.4}
 </style>
 </head>
 <body>
@@ -188,9 +188,10 @@ async function inviteCollaborator(){
   const email=prompt('Email do colaborador:');
   if(!email)return;
   try{
-    const {data:profile}=await sb.from('profiles').select('id').eq('id',(await sb.auth.admin.getUserById(email)).data?.user?.id).single().catch(()=>({data:null}));
-    if(!profile){toast('Usuário não encontrado');return;}
-    await sb.from('album_collaborators').insert({album_id:currentAlbum.id,user_id:profile.id});
+    const {data:authUser}=await sb.auth.admin.listUsers();
+    const user=authUser?.users?.find(u=>u.email===email);
+    if(!user){toast('Usuário não encontrado');return;}
+    await sb.from('album_collaborators').insert({album_id:currentAlbum.id,user_id:user.id});
     toast('Colaborador adicionado!');
     render();
   }catch(e){toast('Erro: '+e.message);}
