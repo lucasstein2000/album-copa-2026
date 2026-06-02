@@ -554,6 +554,45 @@ async function loadAlbumsMenu(){
   }catch(e){console.error(e);}
 }
 
+function exportPDF(){
+  try{
+    const script=document.createElement('script');
+    script.src='https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js';
+    script.onload=()=>{
+      let html='<h1>'+currentAlbum.name+'</h1>';
+      html+='<p>Gerado em: '+new Date().toLocaleDateString('pt-BR')+'</p>';
+      
+      // Faltam
+      html+='<h2>Figurinhas que Faltam</h2><ul>';
+      TEAMS.forEach(t=>{
+        if(t.code==='CC')return;
+        for(let i=1;i<=t.count;i++){
+          const c=owned[t.code+'-'+i]||0;
+          if(c===0)html+='<li>'+t.flag+' '+t.code+'-'+i+' ('+t.name+')</li>';
+        }
+      });
+      html+='</ul>';
+      
+      // Repetidas
+      html+='<h2>Figurinhas Repetidas</h2><ul>';
+      TEAMS.forEach(t=>{
+        if(t.code==='CC')return;
+        for(let i=1;i<=t.count;i++){
+          const c=owned[t.code+'-'+i]||0;
+          if(c>1)html+='<li>'+t.flag+' '+t.code+'-'+i+' ('+t.name+') - ×'+(c-1)+'</li>';
+        }
+      });
+      html+='</ul>';
+      
+      const element=document.createElement('div');
+      element.innerHTML=html;
+      const opt={margin:10,filename:currentAlbum.name+'.pdf',image:{type:'jpeg',quality:0.98},html2canvas:{scale:2},jsPDF:{orientation:'portrait',unit:'mm',format:'a4'}};
+      window.html2pdf().set(opt).from(element).save();
+    };
+    document.head.appendChild(script);
+  }catch(e){toast('Erro ao gerar PDF');}
+}
+
 function render(){
   if(!user){renderAuth();return;}
   if(!currentAlbum){renderAlbumList();return;}
@@ -568,6 +607,7 @@ function render(){
     <button class="btn-sec" style="margin-bottom:8px;margin-right:8px" id="logoutBtn">Logout</button>
     <button class="btn-sec" style="margin-bottom:8px;margin-right:8px" id="idBtn">📋 Meu ID</button>
     <button class="btn-sec" style="margin-bottom:8px;margin-right:8px" id="backBtn">← Álbuns</button>
+    <button class="btn-sec" style="margin-bottom:8px;margin-right:8px" id="pdfBtn">📥 Exportar PDF</button>
     ${isOwner?'<button class="btn-sec" style="margin-bottom:8px" id="inviteBtn">👥 Adicionar</button>':''}
     ${isOwner?'<button class="btn-danger" style="margin-bottom:8px" id="deleteBtn">🗑️ Deletar</button>':''}
     
@@ -634,6 +674,7 @@ function render(){
   app.innerHTML=html;
   
   document.getElementById('logoutBtn').onclick=logout;
+  document.getElementById('pdfBtn').onclick=exportPDF;
   document.getElementById('idBtn').onclick=()=>{
     const modal=document.createElement('div');
     modal.style.cssText='position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.7);display:flex;align-items:center;justify-content:center;z-index:9999';
