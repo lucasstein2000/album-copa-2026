@@ -41,6 +41,7 @@ button{font-family:'Space Mono',monospace;font-weight:700;border:none;border-rad
 .list-box{background:rgba(0,0,0,.2);border:1px solid var(--line);border-radius:9px;padding:12px;margin:12px 0}
 .list-title{font-weight:700;color:var(--gold);margin-bottom:8px;font-size:13px}
 .list-item{font-size:13px;padding:6px 8px;opacity:.85;background:rgba(0,0,0,.15);margin:3px 0;border-radius:6px;line-height:1.4}
+.hidden{display:none !important}
 </style>
 </head>
 <body>
@@ -741,22 +742,23 @@ function render(){
       const team=c.closest('.team').dataset.team;
       const isMissing=+c.dataset.missing;
       const isRepeated=+c.dataset.repeated;
-      let show=team.includes(query);
+      let show=true;
+      if(query)show=team.includes(query);
       if(filter==='faltam')show=show&&isMissing;
       else if(filter==='repetidas')show=show&&isRepeated;
-      c.style.display=show?'block':'none';
+      c.classList.toggle('hidden',!show);
     });
     
     // Oculta teams vazios
     document.querySelectorAll('.team').forEach(team=>{
-      const hasVisibleCells=team.querySelector('.cell[style="display: block"]');
-      team.style.display=hasVisibleCells?'block':'none';
+      const hasVisibleCells=team.querySelector('.cell:not(.hidden)');
+      team.classList.toggle('hidden',!hasVisibleCells);
     });
     
     // Oculta grupos vazios
     document.querySelectorAll('.grp').forEach(grp=>{
-      const hasVisibleTeams=grp.querySelector('.team[style="display: block"]');
-      grp.style.display=hasVisibleTeams?'block':'none';
+      const hasVisibleTeams=grp.querySelector('.team:not(.hidden)');
+      grp.classList.toggle('hidden',!hasVisibleTeams);
     });
   }
   
