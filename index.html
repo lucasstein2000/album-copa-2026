@@ -254,6 +254,7 @@ async function renderHistory(){
     const {data:users}=await sb.from('profiles').select('*');
     const userMap={};
     if(users)users.forEach(u=>userMap[u.id]=u.name||'Usuário');
+    console.log('Users loaded:', users?.length, 'UserMap:', userMap);
     
     const grouped={};
     (logs||[]).forEach(l=>{
@@ -268,7 +269,9 @@ async function renderHistory(){
     }else{
       Object.entries(grouped).forEach(([code,items])=>{
         const team=TEAMS.find(t=>t.code===code);
-        const userName=userMap[items[0].user_id]||'?';
+        const userId=items[0].user_id;
+        const userName=userMap[userId]||'?';
+        console.log('Team', code, 'userId:', userId, 'userName:', userName);
         html+=`<div class="log-item"><div class="log-team">${code} - ${team?.name||'?'}</div>`;
         html+=`<div class="log-info">${items.length} mudança${items.length>1?'s':''} por ${userName} • Última: ${new Date(items[0].created_at).toLocaleDateString('pt-BR')}</div></div>`;
       });
@@ -405,11 +408,12 @@ async function renderCollaborators(){
     const collabIds=collab?collab.map(c=>c.user_id):[];
     console.log('Collab IDs:', collabIds);
     
-    const allIds=[currentAlbum.owner_id,...collabIds];
-    console.log('All IDs:', allIds);
+    console.log('All IDs array:', allIds, 'Length:', allIds.length);
+    console.log('Query in:', allIds);
     
     const {data:users,error:usersError}=await sb.from('profiles').select('*').in('id',allIds);
-    console.log('Users:', users, usersError);
+    console.log('Users query result:', users);
+    console.log('Users error:', usersError);
     
     let html='<h2>👥 Colaboradores</h2>';
     if(!users||users.length===0){
