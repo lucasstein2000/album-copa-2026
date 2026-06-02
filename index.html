@@ -559,34 +559,49 @@ function exportPDF(){
     const script=document.createElement('script');
     script.src='https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js';
     script.onload=()=>{
-      let html='<h1>'+currentAlbum.name+'</h1>';
-      html+='<p>Gerado em: '+new Date().toLocaleDateString('pt-BR')+'</p>';
+      let html=`<div style="font-family:Arial;color:#000;background:#fff;padding:10px">
+        <h2>${currentAlbum.name}</h2>
+        <p style="font-size:11px">${new Date().toLocaleDateString('pt-BR')}</p>
+        
+        <h3 style="margin-top:15px;color:#c41e3a">🔴 FALTAM</h3>`;
       
-      // Faltam
-      html+='<h2>Figurinhas que Faltam</h2><ul>';
+      const missing={};
       TEAMS.forEach(t=>{
         if(t.code==='CC')return;
+        const codes=[];
         for(let i=1;i<=t.count;i++){
           const c=owned[t.code+'-'+i]||0;
-          if(c===0)html+='<li>'+t.flag+' '+t.code+'-'+i+' ('+t.name+')</li>';
+          if(c===0)codes.push(i);
         }
+        if(codes.length>0)missing[t.name]={flag:t.flag,codes};
       });
-      html+='</ul>';
       
-      // Repetidas
-      html+='<h2>Figurinhas Repetidas</h2><ul>';
+      Object.entries(missing).forEach(([name,data])=>{
+        html+=`<p style="font-size:12px;margin:5px 0"><strong>${data.flag} ${name}:</strong> ${data.codes.join(', ')}</p>`;
+      });
+      
+      html+=`<h3 style="margin-top:15px;color:#ffc500">🟡 REPETIDAS</h3>`;
+      
+      const repeated={};
       TEAMS.forEach(t=>{
         if(t.code==='CC')return;
+        const codes=[];
         for(let i=1;i<=t.count;i++){
           const c=owned[t.code+'-'+i]||0;
-          if(c>1)html+='<li>'+t.flag+' '+t.code+'-'+i+' ('+t.name+') - ×'+(c-1)+'</li>';
+          if(c>1)codes.push(i+'(×'+(c-1)+')');
         }
+        if(codes.length>0)repeated[t.name]={flag:t.flag,codes};
       });
-      html+='</ul>';
+      
+      Object.entries(repeated).forEach(([name,data])=>{
+        html+=`<p style="font-size:12px;margin:5px 0"><strong>${data.flag} ${name}:</strong> ${data.codes.join(', ')}</p>`;
+      });
+      
+      html+=`</div>`;
       
       const element=document.createElement('div');
       element.innerHTML=html;
-      const opt={margin:10,filename:currentAlbum.name+'.pdf',image:{type:'jpeg',quality:0.98},html2canvas:{scale:2},jsPDF:{orientation:'portrait',unit:'mm',format:'a4'}};
+      const opt={margin:5,filename:currentAlbum.name+'.pdf',image:{type:'jpeg',quality:0.98},html2canvas:{scale:2},jsPDF:{orientation:'portrait',unit:'mm',format:'a4'}};
       window.html2pdf().set(opt).from(element).save();
     };
     document.head.appendChild(script);
