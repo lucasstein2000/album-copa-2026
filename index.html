@@ -371,7 +371,7 @@ async function renderCollaborators(){
     let html='<h2>👥 Colaboradores</h2>';
     users.forEach(u=>{
       html+=`<div class="collab-item">
-        <div class="collab-name">${u.name}</div>
+        <div class="collab-name">${u.name||'Usuário'}</div>
         <button class="btn-danger" style="padding:6px 10px;font-size:11px" onclick="removeCollab('${u.id}')">Remover</button>
       </div>`;
     });
