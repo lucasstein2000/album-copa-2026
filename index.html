@@ -387,24 +387,22 @@ async function renderAlbums(){
 
 async function renderCollaborators(){
   try{
-    const {data:owner}=await sb.from('profiles').select('*').eq('id',currentAlbum.owner_id).single();
     const {data:collab}=await sb.from('album_collaborators').select('user_id').eq('album_id',currentAlbum.id);
-    const {data:users}=await sb.from('profiles').select('*').in('id',collab.map(c=>c.user_id));
+    const collabIds=collab?collab.map(c=>c.user_id):[];
+    const allIds=[currentAlbum.owner_id,...collabIds];
+    const {data:users}=await sb.from('profiles').select('*').in('id',allIds);
     
     let html='<h2>👥 Colaboradores</h2>';
-    html+=`<div class="collab-item" style="background:rgba(244,196,48,.1)">
-      <div class="collab-name">${owner.name||'Dono'} 👑</div>
-    </div>`;
-    
     users.forEach(u=>{
-      html+=`<div class="collab-item">
-        <div class="collab-name">${u.name||'Usuário'}</div>
-        ${currentAlbum.owner_id===user.id?`<button class="btn-danger" style="padding:6px 10px;font-size:11px" onclick="removeCollab('${u.id}')">Remover</button>`:''}
+      const isOwner=u.id===currentAlbum.owner_id;
+      html+=`<div class="collab-item" ${isOwner?'style="background:rgba(244,196,48,.1)"':''}>
+        <div class="collab-name">${u.name||'Usuário'} ${isOwner?'👑':''}</div>
+        ${!isOwner&&currentAlbum.owner_id===user.id?`<button class="btn-danger" style="padding:6px 10px;font-size:11px" onclick="removeCollab('${u.id}')">Remover</button>`:''}
       </div>`;
     });
     
     document.getElementById('collab').innerHTML=html;
-  }catch(e){console.error(e);}
+  }catch(e){console.error(e);document.getElementById('collab').innerHTML='<p style="opacity:.5">Erro ao carregar</p>';}
 }
 
 window.removeCollab=(id)=>removeCollaborator(id);
