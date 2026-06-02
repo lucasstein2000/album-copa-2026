@@ -91,6 +91,16 @@
 <div id="app"><div class="loading">Carregando…</div></div>
 
 <script type="module">
+const VERSION = "2026.06.02.v2";
+const stored = localStorage.getItem('app-version');
+if(stored && stored !== VERSION) {
+  localStorage.removeItem('app-version');
+  location.reload();
+}
+localStorage.setItem('app-version', VERSION);
+</script>
+
+<script type="module">
 import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm';
 
 const SUPABASE_URL = "https://fektmbitypzwsgfiriyk.supabase.co";
@@ -322,12 +332,10 @@ function render(){
       e.preventDefault();
       if(touchStart && Date.now()-touchStart>400){
         bump(code,n,-1);
+      }else if(touchStart){
+        bump(code,n,+1);
       }
       touchStart=null;
-    },false);
-    c.addEventListener('click',(e)=>{
-      e.preventDefault();
-      bump(code,n,+1);
     },false);
     c.addEventListener('contextmenu',(e)=>{
       e.preventDefault();
