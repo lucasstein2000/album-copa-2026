@@ -560,10 +560,7 @@ function exportPDF(){
     script.src='https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js';
     script.onload=()=>{
       let html=`<div style="font-family:Arial;color:#000;background:#fff;padding:10px">
-        <h2>${currentAlbum.name}</h2>
-        <p style="font-size:11px">${new Date().toLocaleDateString('pt-BR')}</p>
-        
-        <h3 style="margin-top:15px;color:#c41e3a">🔴 FALTAM</h3>`;
+        <h4 style="margin:0;color:#c41e3a">🔴 FALTAM</h4>`;
       
       const missing={};
       TEAMS.forEach(t=>{
@@ -577,10 +574,10 @@ function exportPDF(){
       });
       
       Object.entries(missing).forEach(([name,data])=>{
-        html+=`<p style="font-size:12px;margin:5px 0"><strong>${data.flag} ${name}:</strong> ${data.codes.join(', ')}</p>`;
+        html+=`<p style="font-size:12px;margin:3px 0"><strong>${data.flag} ${name}:</strong> ${data.codes.join(', ')}</p>`;
       });
       
-      html+=`<h3 style="margin-top:15px;color:#ffc500">🟡 REPETIDAS</h3>`;
+      html+=`<h4 style="margin:8px 0 0 0;color:#ffc500">🟡 REPETIDAS</h4>`;
       
       const repeated={};
       TEAMS.forEach(t=>{
@@ -594,7 +591,7 @@ function exportPDF(){
       });
       
       Object.entries(repeated).forEach(([name,data])=>{
-        html+=`<p style="font-size:12px;margin:5px 0"><strong>${data.flag} ${name}:</strong> ${data.codes.join(', ')}</p>`;
+        html+=`<p style="font-size:12px;margin:3px 0"><strong>${data.flag} ${name}:</strong> ${data.codes.join(', ')}</p>`;
       });
       
       html+=`</div>`;
