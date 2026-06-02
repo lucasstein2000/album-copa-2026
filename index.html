@@ -124,15 +124,14 @@ async function init(){
   try{
     const {data:{session}}=await sb.auth.getSession();
     if(session) {
-      user=session.user; 
-      await loadProfile(); 
+      user=session.user;
+      await loadProfile();
       await loadAlbums();
     }
-    render();
   }catch(e){
-    console.error('Erro na inicialização:',e);
-    render();
+    console.error('Erro:',e);
   }
+  render();
 }
 
 async function signup(email,password,name){
@@ -258,11 +257,13 @@ async function renderAuth(){
     <div class="toggle">Esqueceu a senha? <a id="forgot">Reset</a></div>
   </div>`;
   
-  let isSignup=false;
-  const $=(s)=>document.getElementById(s);
-  $('toggle').onclick=()=>{isSignup=!isSignup;$('mode').textContent=isSignup?'Criar conta':'Login';$('name').style.display=isSignup?'block':'none';};
-  $('submit').onclick=()=>{const e=$('email').value,p=$('pass').value;if(isSignup){const n=$('name').value;if(!n){toast('Nome obrigatório');return;}signup(e,p,n);}else login(e,p);};
-  $('forgot').onclick=()=>renderForgotPassword();
+  setTimeout(()=>{
+    let isSignup=false;
+    const $=(s)=>document.getElementById(s);
+    if($('toggle')) $('toggle').onclick=()=>{isSignup=!isSignup;$('mode').textContent=isSignup?'Criar conta':'Login';$('name').style.display=isSignup?'block':'none';};
+    if($('submit')) $('submit').onclick=()=>{const e=$('email').value,p=$('pass').value;if(isSignup){const n=$('name').value;if(!n){toast('Nome obrigatório');return;}signup(e,p,n);}else login(e,p);};
+    if($('forgot')) $('forgot').onclick=()=>renderForgotPassword();
+  },50);
 }
 
 function render(){
@@ -368,10 +369,13 @@ function renderAlbumList(){
   let html=`<h1>Meus <span class="acc">Álbuns</span></h1>
     <button class="btn-gold" id="newBtn">+ Novo Álbum</button><div id="albumList"></div>`;
   app.innerHTML=html;
-  document.getElementById('newBtn').onclick=()=>{
-    const name=prompt('Nome do álbum:');
-    if(name)createAlbum(name);
-  };
+  setTimeout(()=>{
+    const btn=document.getElementById('newBtn');
+    if(btn) btn.onclick=()=>{
+      const name=prompt('Nome do álbum:');
+      if(name)createAlbum(name);
+    };
+  },100);
 }
 
 init();
