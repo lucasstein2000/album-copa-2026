@@ -20,7 +20,7 @@
 .tab-content{display:none}.tab-content.active{display:block}
 .top{display:flex;gap:10px;align-items:center;margin:12px 0;flex-wrap:wrap}.tot{font-family:'Bricolage Grotesque',sans-serif;font-weight:900;font-size:20px}.tot small{font-size:12px;opacity:.6}.bar{flex:1;min-width:120px;height:9px;border-radius:6px;background:rgba(0,0,0,.3)}.bar span{display:block;height:100%;background:linear-gradient(90deg,#1fae5a,#f4c430)}
 .grp{margin-top:18px}.grp-h{font-family:'Bricolage Grotesque',sans-serif;font-weight:800;font-size:13px;text-transform:uppercase;letter-spacing:2px;opacity:.7;border-bottom:1px solid var(--line);padding-bottom:5px;margin-bottom:12px}
-.team{margin-bottom:14px}.team-h{display:flex;align-items:center;gap:9px;margin-bottom:7px}.badge{background:var(--gold);color:var(--ink);font-weight:700;font-size:11px;padding:2px 7px;border-radius:5px}.team-name{font-weight:700;font-size:14px}.team-prog{font-size:11px;opacity:.6;margin-left:auto}
+.team{margin-bottom:14px}.team-h{display:flex;align-items:center;gap:9px;margin-bottom:7px}.badge{background:var(--gold);color:var(--ink);font-weight:700;font-size:11px;padding:2px 7px;border-radius:5px}.team-name{font-weight:700;font-size:14px}.team-prog{font-size:11px;opacity:.6;margin-left:auto}.team-flag{font-size:18px;margin-right:4px}
 .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(50px,1fr));gap:5px}
 .cell{aspect-ratio:1;border-radius:7px;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;cursor:pointer;user-select:none;-webkit-user-select:none;background:var(--miss);position:relative;transition:transform .08s}
 .cell:hover{transform:translateY(-2px)}.cell.have{background:var(--have);color:#042}.cell.rep{background:var(--rep);color:#3a2c00}.cell.rep::after{content:"×"attr(data-c);position:absolute;top:-5px;right:-5px;background:var(--ink);color:var(--gold);font-size:9px;border-radius:9px;padding:1px 4px}
@@ -40,7 +40,7 @@ button{font-family:'Space Mono',monospace;font-weight:700;border:none;border-rad
 .album-info{font-size:11px;opacity:.6}
 .list-box{background:rgba(0,0,0,.2);border:1px solid var(--line);border-radius:9px;padding:12px;margin:12px 0}
 .list-title{font-weight:700;color:var(--gold);margin-bottom:8px;font-size:13px}
-.list-item{font-size:12px;padding:6px 0;opacity:.8}
+.list-item{font-size:12px;padding:8px;opacity:.8;background:rgba(0,0,0,.2);margin:4px 0;border-radius:6px}
 </style>
 </head>
 <body>
@@ -53,21 +53,21 @@ const SUPABASE_URL = "https://fektmbitypzwsgfiriyk.supabase.co";
 const SUPABASE_KEY = "sb_publishable_qIXLVOOYRI4oi129YzR9dw_I-8cuW_V";
 
 const TEAMS=[
-  ['FWC','Abertura','FWC',20],
-  ['A','México','MEX',20],['A','África do Sul','RSA',20],['A','Coreia do Sul','KOR',20],['A','Rep. Tcheca','CZE',20],
-  ['B','Canadá','CAN',20],['B','Bósnia','BIH',20],['B','Catar','QAT',20],['B','Suíça','SUI',20],
-  ['C','Brasil','BRA',20],['C','Marrocos','MAR',20],['C','Haiti','HAI',20],['C','Escócia','SCO',20],
-  ['D','Estados Unidos','USA',20],['D','Paraguai','PAR',20],['D','Austrália','AUS',20],['D','Turquia','TUR',20],
-  ['E','Alemanha','GER',20],['E','Curaçao','CUW',20],['E','Costa do Marfim','CIV',20],['E','Equador','ECU',20],
-  ['F','Holanda','NED',20],['F','Japão','JPN',20],['F','Suécia','SWE',20],['F','Tunísia','TUN',20],
-  ['G','Bélgica','BEL',20],['G','Egito','EGY',20],['G','Irã','IRN',20],['G','Nova Zelândia','NZL',20],
-  ['H','Espanha','ESP',20],['H','Cabo Verde','CPV',20],['H','Arábia Saudita','KSA',20],['H','Uruguai','URU',20],
-  ['I','França','FRA',20],['I','Senegal','SEN',20],['I','Iraque','IRQ',20],['I','Noruega','NOR',20],
-  ['J','Argentina','ARG',20],['J','Argélia','ALG',20],['J','Áustria','AUT',20],['J','Jordânia','JOR',20],
-  ['K','Portugal','POR',20],['K','Congo','COD',20],['K','Uzbequistão','UZB',20],['K','Colômbia','COL',20],
-  ['L','Inglaterra','ENG',20],['L','Croácia','CRO',20],['L','Gana','GHA',20],['L','Panamá','PAN',20],
-  ['CC','Coca-Cola','CC',14],
-].map(t=>({group:t[0],name:t[1],code:t[2],count:t[3]}));
+  ['FWC','Abertura','FWC',20,''],
+  ['A','México','MEX',20,'🇲🇽'],['A','África do Sul','RSA',20,'🇿🇦'],['A','Coreia do Sul','KOR',20,'🇰🇷'],['A','Rep. Tcheca','CZE',20,'🇨🇿'],
+  ['B','Canadá','CAN',20,'🇨🇦'],['B','Bósnia','BIH',20,'🇧🇦'],['B','Catar','QAT',20,'🇶🇦'],['B','Suíça','SUI',20,'🇨🇭'],
+  ['C','Brasil','BRA',20,'🇧🇷'],['C','Marrocos','MAR',20,'🇲🇦'],['C','Haiti','HAI',20,'🇭🇹'],['C','Escócia','SCO',20,'🏴󠁧󠁢󠁳󠁣󠁴󠁿'],
+  ['D','Estados Unidos','USA',20,'🇺🇸'],['D','Paraguai','PAR',20,'🇵🇾'],['D','Austrália','AUS',20,'🇦🇺'],['D','Turquia','TUR',20,'🇹🇷'],
+  ['E','Alemanha','GER',20,'🇩🇪'],['E','Curaçao','CUW',20,'🇨🇼'],['E','Costa do Marfim','CIV',20,'🇨🇮'],['E','Equador','ECU',20,'🇪🇨'],
+  ['F','Holanda','NED',20,'🇳🇱'],['F','Japão','JPN',20,'🇯🇵'],['F','Suécia','SWE',20,'🇸🇪'],['F','Tunísia','TUN',20,'🇹🇳'],
+  ['G','Bélgica','BEL',20,'🇧🇪'],['G','Egito','EGY',20,'🇪🇬'],['G','Irã','IRN',20,'🇮🇷'],['G','Nova Zelândia','NZL',20,'🇳🇿'],
+  ['H','Espanha','ESP',20,'🇪🇸'],['H','Cabo Verde','CPV',20,'🇨🇻'],['H','Arábia Saudita','KSA',20,'🇸🇦'],['H','Uruguai','URU',20,'🇺🇾'],
+  ['I','França','FRA',20,'🇫🇷'],['I','Senegal','SEN',20,'🇸🇳'],['I','Iraque','IRQ',20,'🇮🇶'],['I','Noruega','NOR',20,'🇳🇴'],
+  ['J','Argentina','ARG',20,'🇦🇷'],['J','Argélia','ALG',20,'🇩🇿'],['J','Áustria','AUT',20,'🇦🇹'],['J','Jordânia','JOR',20,'🇯🇴'],
+  ['K','Portugal','POR',20,'🇵🇹'],['K','Congo','COD',20,'🇨🇩'],['K','Uzbequistão','UZB',20,'🇺🇿'],['K','Colômbia','COL',20,'🇨🇴'],
+  ['L','Inglaterra','ENG',20,'🏴󠁧󠁢󠁥󠁮󠁧󠁿'],['L','Croácia','CRO',20,'🇭🇷'],['L','Gana','GHA',20,'🇬🇭'],['L','Panamá','PAN',20,'🇵🇦'],
+  ['CC','Coca-Cola','CC',14,'🥤'],
+].map(t=>({group:t[0],name:t[1],code:t[2],count:t[3],flag:t[4]}));
 
 let sb, user=null, currentAlbum=null, owned={}, allUsers={}, allAlbums={}, allCollab={};
 const app=document.getElementById('app');
@@ -272,19 +272,19 @@ async function renderLista(){
     if(t.code==='CC')return;
     for(let i=1;i<=t.count;i++){
       const c=owned[t.code+'-'+i]||0;
-      if(c===0)missing.push(`${t.code}-${i}`);
-      else if(c>1)repeated.push(`${t.code}-${i} (×${c})`);
+      if(c===0)missing.push({code:`${t.code}-${i}`,team:t.name,flag:t.flag});
+      else if(c>1)repeated.push({code:`${t.code}-${i}`,team:t.name,count:c,flag:t.flag});
     }
   });
   
   html+=`<div class="list-box">
     <div class="list-title">🔴 Faltam (${missing.length}):</div>
-    ${missing.length>0?missing.map(s=>`<div class="list-item">${s}</div>`).join(''):'<div class="list-item" style="opacity:.5">Nenhuma</div>'}
+    ${missing.length>0?missing.map(s=>`<div class="list-item">${s.flag} ${s.code} • ${s.team}</div>`).join(''):'<div class="list-item" style="opacity:.5">Nenhuma 🎉</div>'}
   </div>
   
   <div class="list-box">
     <div class="list-title">🟡 Repetidas (${repeated.length}):</div>
-    ${repeated.length>0?repeated.map(s=>`<div class="list-item">${s}</div>`).join(''):'<div class="list-item" style="opacity:.5">Nenhuma</div>'}
+    ${repeated.length>0?repeated.map(s=>`<div class="list-item">${s.flag} ${s.code} (×${s.count-1}) • ${s.team}</div>`).join(''):'<div class="list-item" style="opacity:.5">Nenhuma</div>'}
   </div>`;
   
   document.getElementById('lista').innerHTML=html;
@@ -490,11 +490,11 @@ function render(){
               if(c>0)have++;
             }
             return `<div class="team" data-team="${t.name.toLowerCase()}" data-missing="${missing}" data-repeated="${repeated}">
-              <div class="team-h"><span class="badge">${t.code}</span><span class="team-name">${t.name}</span><span class="team-prog">${have}/${t.count}</span></div>
+              <div class="team-h"><span class="team-flag">${t.flag}</span><span class="badge">${t.code}</span><span class="team-name">${t.name}</span><span class="team-prog">${have}/${t.count}</span></div>
               <div class="grid">${Array.from({length:t.count},(_,i)=>{
                 const c=owned[t.code+'-'+(i+1)]||0;
                 const cls=c>1?'rep':c===1?'have':'miss';
-                return `<div class="cell ${cls}" data-code="${t.code}" data-n="${i+1}" ${c>1?`data-c="${c-1}"`:''}>${i+1}</div>`;
+                return `<div class="cell ${cls}" data-code="${t.code}" data-n="${i+1}" data-missing="${c===0?1:0}" data-repeated="${c>1?1:0}" ${c>1?`data-c="${c-1}"`:''}>${i+1}</div>`;
               }).join('')}</div>
             </div>`;
           }).join('')}
@@ -521,19 +521,7 @@ function render(){
     searchInput.onkeyup=()=>{
       const query=searchInput.value.toLowerCase();
       const activeFilter=document.querySelector('[data-filter].active')?.dataset.filter||'todas';
-      document.querySelectorAll('.team').forEach(t=>{
-        const name=t.dataset.team;
-        const missing=+t.dataset.missing;
-        const repeated=+t.dataset.repeated;
-        let show=name.includes(query);
-        if(activeFilter==='faltam')show=show&&missing>0;
-        else if(activeFilter==='repetidas')show=show&&repeated>0;
-        t.style.display=show?'block':'none';
-      });
-      document.querySelectorAll('.grp').forEach(grp=>{
-        const hasVisibleTeams=grp.querySelector('.team[style="display: block"], .team:not([style*="display: none"])');
-        grp.style.display=hasVisibleTeams?'block':'none';
-      });
+      applyFilters(activeFilter,query);
     };
   }
   
@@ -543,26 +531,30 @@ function render(){
       btn.classList.add('active');
       const filter=btn.dataset.filter;
       const query=searchInput?.value.toLowerCase()||'';
-      document.querySelectorAll('.team').forEach(t=>{
-        const name=t.dataset.team;
-        const missing=+t.dataset.missing;
-        const repeated=+t.dataset.repeated;
-        let show=name.includes(query);
-        if(filter==='faltam')show=show&&missing>0;
-        else if(filter==='repetidas')show=show&&repeated>0;
-        t.style.display=show?'block':'none';
-      });
-      document.querySelectorAll('.grp').forEach(grp=>{
-        const hasVisibleTeams=grp.querySelector('.team[style="display: block"], .team:not([style*="display: none"])');
-        grp.style.display=hasVisibleTeams?'block':'none';
-      });
+      applyFilters(filter,query);
     };
   });
   
+  function applyFilters(filter,query){
+    document.querySelectorAll('.cell').forEach(c=>{
+      const team=c.closest('.team').dataset.team;
+      const isMissing=+c.dataset.missing;
+      const isRepeated=+c.dataset.repeated;
+      let show=team.includes(query);
+      if(filter==='faltam')show=show&&isMissing;
+      else if(filter==='repetidas')show=show&&isRepeated;
+      c.style.display=show?'block':'none';
+    });
+    document.querySelectorAll('.grp').forEach(grp=>{
+      const hasVisibleCells=grp.querySelector('.cell[style="display: block"], .cell:not([style*="display: none"])');
+      grp.style.display=hasVisibleCells?'block':'none';
+    });
+  }
+  
   let totalMissing=0,totalRepeated=0;
-  document.querySelectorAll('.team').forEach(t=>{
-    totalMissing+=+t.dataset.missing;
-    totalRepeated+=+t.dataset.repeated;
+  document.querySelectorAll('.cell').forEach(c=>{
+    totalMissing+=+c.dataset.missing;
+    totalRepeated+=+c.dataset.repeated;
   });
   document.getElementById('countMissing').textContent=totalMissing;
   document.getElementById('countRepeated').textContent=totalRepeated;
