@@ -248,29 +248,34 @@ async function renderMarketplace(){
 
 async function renderHistory(){
   try{
-    const {data:logs,error:logError}=await sb.from('sticker_log').select('*, profiles(id, name)').eq('album_id',currentAlbum.id).order('created_at',{ascending:false}).limit(500);
-    console.log('Logs with profiles:', logs, logError);
+    const {data:logs}=await sb.from('sticker_log').select('*').eq('album_id',currentAlbum.id).order('created_at',{ascending:false}).limit(500);
+    console.log('Logs:', logs);
+    
+    if(!logs||logs.length===0){
+      document.getElementById('history').innerHTML='<h2>🕘 Histórico</h2><p style="opacity:.6">Sem histórico</p>';
+      return;
+    }
+    
+    // Pega todos os user_ids únicos
+    const userIds=[...new Set(logs.map(l=>l.user_id).filter(Boolean))];
+    const {data:users}=await sb.from('profiles').select('id, name').in('id',userIds);
+    const userMap={};
+    users.forEach(u=>userMap[u.id]=u.name||'Usuário');
     
     const grouped={};
-    (logs||[]).forEach(l=>{
+    logs.forEach(l=>{
       const code=l.sticker_code.split('-')[0];
       if(!grouped[code])grouped[code]=[];
       grouped[code].push(l);
     });
     
     let html='<h2>🕘 Histórico</h2>';
-    if(Object.keys(grouped).length===0){
-      html+='<p style="opacity:.6">Sem histórico</p>';
-    }else{
-      Object.entries(grouped).forEach(([code,items])=>{
-        const team=TEAMS.find(t=>t.code===code);
-        const profileData=items[0].profiles;
-        const userName=profileData?.name || '?';
-        console.log('Team', code, 'profile:', profileData, 'userName:', userName);
-        html+=`<div class="log-item"><div class="log-team">${code} - ${team?.name||'?'}</div>`;
-        html+=`<div class="log-info">${items.length} mudança${items.length>1?'s':''} por ${userName} • Última: ${new Date(items[0].created_at).toLocaleDateString('pt-BR')}</div></div>`;
-      });
-    }
+    Object.entries(grouped).forEach(([code,items])=>{
+      const team=TEAMS.find(t=>t.code===code);
+      const userName=userMap[items[0].user_id]||'?';
+      html+=`<div class="log-item"><div class="log-team">${code} - ${team?.name||'?'}</div>`;
+      html+=`<div class="log-info">${items.length} mudança${items.length>1?'s':''} por ${userName} • Última: ${new Date(items[0].created_at).toLocaleDateString('pt-BR')}</div></div>`;
+    });
     
     document.getElementById('history').innerHTML=html;
   }catch(e){console.error('Erro history:', e);document.getElementById('history').innerHTML=`<p style="opacity:.5">Erro: ${e.message}</p>`;}
@@ -396,13 +401,10 @@ async function renderAlbums(){
 
 async function renderCollaborators(){
   try{
-    console.log('Carregando colaboradores...');
-    const {data:collab,error:collabError}=await sb.from('album_collaborators').select('user_id, profiles(id, name)').eq('album_id',currentAlbum.id);
-    console.log('Collab query:', collab, collabError);
-    
-    // Get owner
+    const {data:collab}=await sb.from('album_collaborators').select('user_id').eq('album_id',currentAlbum.id);
     const {data:ownerData}=await sb.from('profiles').select('id, name').eq('id',currentAlbum.owner_id).single();
-    console.log('Owner:', ownerData);
+    
+    console.log('Collab:', collab, 'Owner:', ownerData);
     
     let html='<h2>👥 Colaboradores</h2>';
     
@@ -413,15 +415,15 @@ async function renderCollaborators(){
       </div>`;
     }
     
-    // Show collaborators
-    if(!collab||collab.length===0){
-      if(!ownerData)html+='<p style="opacity:.5">Nenhum colaborador</p>';
-    }else{
-      collab.forEach(c=>{
-        const profile=c.profiles;
+    // Get collaborators
+    if(collab&&collab.length>0){
+      const collabIds=collab.map(c=>c.user_id);
+      const {data:collabUsers}=await sb.from('profiles').select('id, name').in('id',collabIds);
+      
+      collabUsers.forEach(u=>{
         html+=`<div class="collab-item">
-          <div class="collab-name">${profile?.name||'Usuário'}</div>
-          ${currentAlbum.owner_id===user.id?`<button class="btn-danger" style="padding:6px 10px;font-size:11px" onclick="removeCollab('${c.user_id}')">Remover</button>`:''}
+          <div class="collab-name">${u.name||'Usuário'}</div>
+          ${currentAlbum.owner_id===user.id?`<button class="btn-danger" style="padding:6px 10px;font-size:11px" onclick="removeCollab('${u.id}')">Remover</button>`:''}
         </div>`;
       });
     }
