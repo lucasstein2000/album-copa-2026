@@ -387,22 +387,34 @@ async function renderAlbums(){
 
 async function renderCollaborators(){
   try{
-    const {data:collab}=await sb.from('album_collaborators').select('user_id').eq('album_id',currentAlbum.id);
+    console.log('Carregando colaboradores...');
+    const {data:collab,error:collabError}=await sb.from('album_collaborators').select('user_id').eq('album_id',currentAlbum.id);
+    console.log('Collab query:', collab, collabError);
+    
     const collabIds=collab?collab.map(c=>c.user_id):[];
+    console.log('Collab IDs:', collabIds);
+    
     const allIds=[currentAlbum.owner_id,...collabIds];
-    const {data:users}=await sb.from('profiles').select('*').in('id',allIds);
+    console.log('All IDs:', allIds);
+    
+    const {data:users,error:usersError}=await sb.from('profiles').select('*').in('id',allIds);
+    console.log('Users:', users, usersError);
     
     let html='<h2>👥 Colaboradores</h2>';
-    users.forEach(u=>{
-      const isOwner=u.id===currentAlbum.owner_id;
-      html+=`<div class="collab-item" ${isOwner?'style="background:rgba(244,196,48,.1)"':''}>
-        <div class="collab-name">${u.name||'Usuário'} ${isOwner?'👑':''}</div>
-        ${!isOwner&&currentAlbum.owner_id===user.id?`<button class="btn-danger" style="padding:6px 10px;font-size:11px" onclick="removeCollab('${u.id}')">Remover</button>`:''}
-      </div>`;
-    });
+    if(!users||users.length===0){
+      html+='<p style="opacity:.5">Nenhum colaborador</p>';
+    }else{
+      users.forEach(u=>{
+        const isOwner=u.id===currentAlbum.owner_id;
+        html+=`<div class="collab-item" ${isOwner?'style="background:rgba(244,196,48,.1)"':''}>
+          <div class="collab-name">${u.name||'Usuário'} ${isOwner?'👑':''}</div>
+          ${!isOwner&&currentAlbum.owner_id===user.id?`<button class="btn-danger" style="padding:6px 10px;font-size:11px" onclick="removeCollab('${u.id}')">Remover</button>`:''}
+        </div>`;
+      });
+    }
     
     document.getElementById('collab').innerHTML=html;
-  }catch(e){console.error(e);document.getElementById('collab').innerHTML='<p style="opacity:.5">Erro ao carregar</p>';}
+  }catch(e){console.error('Erro:', e);document.getElementById('collab').innerHTML=`<p style="opacity:.5">Erro: ${e.message}</p>`;}
 }
 
 window.removeCollab=(id)=>removeCollaborator(id);
