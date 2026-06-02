@@ -157,6 +157,17 @@ async function deleteAlbum(){
   }catch(e){toast('Erro: '+e.message);}
 }
 
+async function editAlbumName(){
+  const newName=prompt('Novo nome:',currentAlbum.name);
+  if(!newName||newName===currentAlbum.name)return;
+  try{
+    await sb.from('albums').update({name:newName}).eq('id',currentAlbum.id);
+    currentAlbum.name=newName;
+    render();
+    toast('Nome alterado!');
+  }catch(e){toast('Erro: '+e.message);}
+}
+
 async function bump(code,n,dir){
   const k=code+'-'+n;
   const nv=Math.max(0,(owned[k]||0)+dir);
@@ -291,9 +302,13 @@ async function renderCollaborators(){
 }
 
 window.removeCollab=(id)=>removeCollaborator(id);
-window.selectAlbum=(id)=>{
-  currentAlbum={id};
-  loadData();
+window.selectAlbum=async(id)=>{
+  try{
+    const {data:album}=await sb.from('albums').select('*').eq('id',id).single();
+    currentAlbum=album;
+    await loadStickers();
+    render();
+  }catch(e){toast('Erro ao carregar álbum');}
 };
 
 function totals(){
@@ -359,20 +374,37 @@ function render(){
   const isOwner=currentAlbum.owner_id===user.id;
   
   let html=`<h1>Álbum <span class="acc">Copa 2026</span></h1>
-    <div class="sub">${currentAlbum.name}</div>
+    <div class="sub">${currentAlbum.name} <a id="editBtn" style="color:var(--gold);cursor:pointer;font-size:11px;opacity:.7">✏️</a></div>
     <button class="btn-sec" style="margin-bottom:8px;margin-right:8px" id="logoutBtn">Logout</button>
     <button class="btn-sec" style="margin-bottom:8px;margin-right:8px" id="backBtn">← Álbuns</button>
     <button class="btn-sec" style="margin-bottom:8px" id="inviteBtn">👥 Adicionar</button>
     ${isOwner?'<button class="btn-danger" style="margin-bottom:8px" id="deleteBtn">🗑️ Deletar</button>':''}
     
     <div class="tabs">
+      <button class="tab-btn" data-tab="albums">📚 Meus Álbuns</button>
       <button class="tab-btn active" data-tab="album">📊 Álbum</button>
       <button class="tab-btn" data-tab="market">🔄 Trocas</button>
       <button class="tab-btn" data-tab="history">🕘 Histórico</button>
       ${isOwner?'<button class="tab-btn" data-tab="collab">👥 Colaboradores</button>':''}
     </div>
     
+    <div id="albums" class="tab-content"><p style="opacity:.6">Carregando…</p></div>
     <div id="album" class="tab-content active">
+      <div style="margin-bottom:14px">
+        <input type="text" id="searchTeam" placeholder="🔍 Buscar time..." style="width:100%;max-width:300px;margin-bottom:10px">
+        <div style="display:flex;gap:8px;flex-wrap:wrap">
+          <button class="tab-btn active" data-filter="todas" style="flex:1;min-width:80px">Todas</button>
+          <button class="tab-btn" data-filter="faltam">Faltam</button>
+          <button class="tab-btn" data-filter="repetidas">Repetidas</button>
+        </div>
+      </div>
+      
+      <div style="background:rgba(0,0,0,.25);border:1px solid var(--line);border-radius:9px;padding:12px;margin-bottom:14px;font-size:12px">
+        <div style="margin-bottom:6px"><span style="color:var(--gold);font-weight:700">📊 Resumo:</span></div>
+        <div style="opacity:.8">🔴 Faltam: <strong id="countMissing">0</strong> figurinhas</div>
+        <div style="opacity:.8">🟡 Repetidas: <strong id="countRepeated">0</strong> figurinhas</div>
+      </div>
+      
       <div class="top">
         <div class="tot">${o}<small>/${total} · ${pct}%</small></div>
         <div class="bar" style="flex:1"><span style="width:${pct}%;height:100%;background:linear-gradient(90deg,#1fae5a,#f4c430);transition:width .4s"></span></div>
@@ -383,8 +415,14 @@ function render(){
         return `<div class="grp">
           <div class="grp-h">${g==='FWC'?'★ Abertura':g==='CC'?'◎ Coca-Cola':'Grupo '+g}</div>
           ${tg.map(t=>{
-            let have=0;for(let i=1;i<=t.count;i++)if(owned[t.code+'-'+i])have++;
-            return `<div class="team">
+            let have=0,missing=0,repeated=0;
+            for(let i=1;i<=t.count;i++){
+              const c=owned[t.code+'-'+i]||0;
+              if(c===0)missing++;
+              else if(c>1)repeated+=c-1;
+              if(c>0)have++;
+            }
+            return `<div class="team" data-team="${t.name.toLowerCase()}" data-missing="${missing}" data-repeated="${repeated}">
               <div class="team-h"><span class="badge">${t.code}</span><span class="team-name">${t.name}</span><span class="team-prog">${have}/${t.count}</span></div>
               <div class="grid">${Array.from({length:t.count},(_,i)=>{
                 const c=owned[t.code+'-'+(i+1)]||0;
@@ -407,13 +445,58 @@ function render(){
   document.getElementById('logoutBtn').onclick=logout;
   document.getElementById('backBtn').onclick=()=>{currentAlbum=null;render();};
   document.getElementById('inviteBtn').onclick=inviteCollaborator;
+  document.getElementById('editBtn').onclick=editAlbumName;
   if(isOwner)document.getElementById('deleteBtn').onclick=deleteAlbum;
+  
+  const searchInput=document.getElementById('searchTeam');
+  if(searchInput){
+    searchInput.onkeyup=()=>{
+      const query=searchInput.value.toLowerCase();
+      const activeFilter=document.querySelector('[data-filter].active')?.dataset.filter||'todas';
+      document.querySelectorAll('.team').forEach(t=>{
+        const name=t.dataset.team;
+        const missing=+t.dataset.missing;
+        const repeated=+t.dataset.repeated;
+        let show=name.includes(query);
+        if(activeFilter==='faltam')show=show&&missing>0;
+        else if(activeFilter==='repetidas')show=show&&repeated>0;
+        t.style.display=show?'block':'none';
+      });
+    };
+  }
+  
+  document.querySelectorAll('[data-filter]').forEach(btn=>{
+    btn.onclick=()=>{
+      document.querySelectorAll('[data-filter]').forEach(b=>b.classList.remove('active'));
+      btn.classList.add('active');
+      const filter=btn.dataset.filter;
+      const query=searchInput?.value.toLowerCase()||'';
+      document.querySelectorAll('.team').forEach(t=>{
+        const name=t.dataset.team;
+        const missing=+t.dataset.missing;
+        const repeated=+t.dataset.repeated;
+        let show=name.includes(query);
+        if(filter==='faltam')show=show&&missing>0;
+        else if(filter==='repetidas')show=show&&repeated>0;
+        t.style.display=show?'block':'none';
+      });
+    };
+  });
+  
+  let totalMissing=0,totalRepeated=0;
+  document.querySelectorAll('.team').forEach(t=>{
+    totalMissing+=+t.dataset.missing;
+    totalRepeated+=+t.dataset.repeated;
+  });
+  document.getElementById('countMissing').textContent=totalMissing;
+  document.getElementById('countRepeated').textContent=totalRepeated;
   
   document.querySelectorAll('.tab-btn').forEach(b=>b.onclick=()=>{
     document.querySelectorAll('.tab-btn').forEach(x=>x.classList.remove('active'));
     document.querySelectorAll('.tab-content').forEach(x=>x.classList.remove('active'));
     b.classList.add('active');
     document.getElementById(b.dataset.tab).classList.add('active');
+    if(b.dataset.tab==='albums')renderAlbums();
     if(b.dataset.tab==='market')renderMarketplace();
     if(b.dataset.tab==='history')renderHistory();
     if(b.dataset.tab==='collab')renderCollaborators();
