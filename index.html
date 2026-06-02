@@ -25,6 +25,12 @@
 .cell:hover{transform:translateY(-2px)}.cell.have{background:var(--have);color:#042}.cell.rep{background:var(--rep);color:#3a2c00}.cell.rep::after{content:"×"attr(data-c);position:absolute;top:-5px;right:-5px;background:var(--ink);color:var(--gold);font-size:9px;border-radius:9px;padding:1px 4px}
 button{font-family:'Space Mono',monospace;font-weight:700;border:none;border-radius:9px;padding:9px 13px;cursor:pointer;font-size:12px}.btn-gold{background:var(--gold);color:var(--ink)}.btn-sec{background:rgba(0,0,0,.22);color:var(--paper);border:1px solid var(--line)}
 .note{font-size:11px;opacity:.5;margin-top:12px}input{background:rgba(0,0,0,.25);border:1px solid var(--line);color:var(--paper);border-radius:9px;padding:9px 11px;font-family:'Space Mono',monospace;font-size:13px}
+.log-item{background:rgba(0,0,0,.2);border:1px solid var(--line);border-radius:9px;padding:12px;margin:8px 0;font-size:12px}
+.log-team{font-weight:700;color:var(--gold);margin-bottom:4px}
+.log-info{opacity:.7}
+.trade-box{background:rgba(31,174,90,.1);border:1px solid var(--have);border-radius:9px;padding:12px;margin:12px 0}
+.trade-box .user{font-weight:700;color:var(--gold);margin-bottom:8px}
+.trade-item{font-size:12px;margin:6px 0}
 </style>
 </head>
 <body>
@@ -35,6 +41,7 @@ import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js
 
 const SUPABASE_URL = "https://fektmbitypzwsgfiriyk.supabase.co";
 const SUPABASE_KEY = "sb_publishable_qIXLVOOYRI4oi129YzR9dw_I-8cuW_V";
+const ADMIN_EMAIL = "lucasstein2000@gmail.com";
 
 const TEAMS=[
   ['FWC','Abertura','FWC',20],
@@ -53,7 +60,7 @@ const TEAMS=[
   ['CC','Coca-Cola','CC',14],
 ].map(t=>({group:t[0],name:t[1],code:t[2],count:t[3]}));
 
-let sb, user=null, currentAlbum=null, owned={};
+let sb, user=null, currentAlbum=null, owned={}, allUsers={}, allAlbums={};
 const app=document.getElementById('app');
 
 function toast(m){
@@ -132,7 +139,76 @@ async function bump(code,n,dir){
   try{
     if(nv===0)await sb.from('stickers').delete().eq('album_id',currentAlbum.id).eq('sticker_code',k);
     else await sb.from('stickers').upsert({album_id:currentAlbum.id,sticker_code:k,count:nv});
+    await sb.from('sticker_log').insert({album_id:currentAlbum.id,sticker_code:k,action:dir>0?'add':'remove'});
   }catch(e){toast('Erro ao salvar');}
+}
+
+async function importOldData(){
+  if(user.email!==ADMIN_EMAIL){toast('Só admin pode importar');return;}
+  try{
+    const {data:old}=await sb.from('stickers').select('sticker_code,count').eq('album_id','albumcopa2026');
+    if(!old||!old.length){toast('Nenhum dado antigo');return;}
+    await Promise.all(old.map(r=>sb.from('stickers').upsert({album_id:currentAlbum.id,sticker_code:r.sticker_code,count:r.count})));
+    await loadStickers();
+    toast('Importado!');
+  }catch(e){toast('Erro: '+e.message);}
+}
+
+async function loadMarketplace(){
+  try{
+    const {data:users}=await sb.from('profiles').select('*');
+    const {data:albums}=await sb.from('albums').select('*');
+    allUsers={};users.forEach(u=>allUsers[u.id]=u);
+    allAlbums={};albums.forEach(a=>allAlbums[a.id]=a);
+  }catch(e){console.error(e);}
+}
+
+async function renderMarketplace(){
+  await loadMarketplace();
+  let html='<h2>🔄 Trocas</h2>';
+  const myReps=Object.entries(owned).filter(([k,v])=>v>1).map(([k])=>k);
+  
+  for(const [id,album] of Object.entries(allAlbums)){
+    if(id===currentAlbum.id)continue;
+    try{
+      const {data:sticks}=await sb.from('stickers').select('sticker_code').eq('album_id',id).gt('count',1);
+      const theirReps=(sticks||[]).map(s=>s.sticker_code);
+      const owner=allUsers[album.owner_id];
+      
+      const myNeed=myReps.filter(r=>theirReps.includes(r));
+      const theyNeed=theirReps.filter(r=>myReps.includes(r));
+      
+      if(myNeed.length>0||theyNeed.length>0){
+        html+=`<div class="trade-box"><div class="user">${owner.name} — ${album.name}</div>`;
+        if(myNeed.length>0)html+=`<div class="trade-item">🔴 Você pode dar: ${myNeed.join(', ')}</div>`;
+        if(theyNeed.length>0)html+=`<div class="trade-item">🟢 Você pode receber: ${theyNeed.join(', ')}</div>`;
+        html+=`</div>`;
+      }
+    }catch(e){}
+  }
+  
+  document.getElementById('market').innerHTML=html||'<p style="opacity:.6">Nenhuma troca disponível</p>';
+}
+
+async function renderHistory(){
+  try{
+    const {data:logs}=await sb.from('sticker_log').select('*').eq('album_id',currentAlbum.id).order('created_at',{ascending:false}).limit(500);
+    const grouped={};
+    (logs||[]).forEach(l=>{
+      const code=l.sticker_code.split('-')[0];
+      if(!grouped[code])grouped[code]=[];
+      grouped[code].push(l);
+    });
+    
+    let html='<h2>🕘 Histórico</h2>';
+    Object.entries(grouped).forEach(([code,items])=>{
+      const team=TEAMS.find(t=>t.code===code);
+      html+=`<div class="log-item"><div class="log-team">${code} - ${team?.name||'?'}</div>`;
+      html+=`<div class="log-info">${items.length} mudança${items.length>1?'s':''} • Última: ${new Date(items[0].created_at).toLocaleDateString('pt-BR')}</div></div>`;
+    });
+    
+    document.getElementById('history').innerHTML=html||'<p style="opacity:.6">Sem histórico</p>';
+  }catch(e){console.error(e);}
 }
 
 function totals(){
@@ -194,33 +270,55 @@ function render(){
     <div class="sub">${currentAlbum.name}</div>
     <button class="btn-sec" style="margin-bottom:16px" id="logoutBtn">Logout</button>
     
-    <div class="top">
-      <div class="tot">${o}<small>/${total} · ${pct}%</small></div>
-      <div class="bar" style="flex:1"><span style="width:${pct}%;height:100%;background:linear-gradient(90deg,#1fae5a,#f4c430);transition:width .4s"></span></div>
+    <div class="tabs">
+      <button class="tab-btn active" data-tab="album">📊 Álbum</button>
+      <button class="tab-btn" data-tab="market">🔄 Trocas</button>
+      <button class="tab-btn" data-tab="history">🕘 Histórico</button>
+      ${user.email===ADMIN_EMAIL?'<button class="tab-btn" data-tab="admin">🔧 Admin</button>':''}
     </div>
     
-    ${groups.map(g=>{
-      const tg=TEAMS.filter(t=>t.group===g);
-      return `<div class="grp">
-        <div class="grp-h">${g==='FWC'?'★ Abertura':g==='CC'?'◎ Coca-Cola':'Grupo '+g}</div>
-        ${tg.map(t=>{
-          let have=0;for(let i=1;i<=t.count;i++)if(owned[t.code+'-'+i])have++;
-          return `<div class="team">
-            <div class="team-h"><span class="badge">${t.code}</span><span class="team-name">${t.name}</span><span class="team-prog">${have}/${t.count}</span></div>
-            <div class="grid">${Array.from({length:t.count},(_,i)=>{
-              const c=owned[t.code+'-'+(i+1)]||0;
-              const cls=c>1?'rep':c===1?'have':'miss';
-              return `<div class="cell ${cls}" data-code="${t.code}" data-n="${i+1}" ${c>1?`data-c="${c-1}"`:''}>${i+1}</div>`;
-            }).join('')}</div>
-          </div>`;
-        }).join('')}
-      </div>`;
-    }).join('')}
+    <div id="album" class="tab-content active">
+      <div class="top">
+        <div class="tot">${o}<small>/${total} · ${pct}%</small></div>
+        <div class="bar" style="flex:1"><span style="width:${pct}%;height:100%;background:linear-gradient(90deg,#1fae5a,#f4c430);transition:width .4s"></span></div>
+      </div>
+      
+      ${groups.map(g=>{
+        const tg=TEAMS.filter(t=>t.group===g);
+        return `<div class="grp">
+          <div class="grp-h">${g==='FWC'?'★ Abertura':g==='CC'?'◎ Coca-Cola':'Grupo '+g}</div>
+          ${tg.map(t=>{
+            let have=0;for(let i=1;i<=t.count;i++)if(owned[t.code+'-'+i])have++;
+            return `<div class="team">
+              <div class="team-h"><span class="badge">${t.code}</span><span class="team-name">${t.name}</span><span class="team-prog">${have}/${t.count}</span></div>
+              <div class="grid">${Array.from({length:t.count},(_,i)=>{
+                const c=owned[t.code+'-'+(i+1)]||0;
+                const cls=c>1?'rep':c===1?'have':'miss';
+                return `<div class="cell ${cls}" data-code="${t.code}" data-n="${i+1}" ${c>1?`data-c="${c-1}"`:''}>${i+1}</div>`;
+              }).join('')}</div>
+            </div>`;
+          }).join('')}
+        </div>`;
+      }).join('')}
+    </div>
+    
+    <div id="market" class="tab-content"><p style="opacity:.6">Carregando trocas…</p></div>
+    <div id="history" class="tab-content"><p style="opacity:.6">Carregando histórico…</p></div>
+    ${user.email===ADMIN_EMAIL?'<div id="admin" class="tab-content"><button class="btn-gold" id="importBtn">Importar dados antigos</button></div>':''}
   `;
   
   app.innerHTML=html;
   
   document.getElementById('logoutBtn').onclick=logout;
+  
+  document.querySelectorAll('.tab-btn').forEach(b=>b.onclick=()=>{
+    document.querySelectorAll('.tab-btn').forEach(x=>x.classList.remove('active'));
+    document.querySelectorAll('.tab-content').forEach(x=>x.classList.remove('active'));
+    b.classList.add('active');
+    document.getElementById(b.dataset.tab).classList.add('active');
+    if(b.dataset.tab==='market')renderMarketplace();
+    if(b.dataset.tab==='history')renderHistory();
+  });
   
   let touchStart=null;
   document.querySelectorAll('.cell').forEach(c=>{
@@ -236,6 +334,9 @@ function render(){
     },false);
     c.addEventListener('contextmenu',(e)=>{e.preventDefault();bump(code,n,-1);},false);
   });
+  
+  const importBtn=document.getElementById('importBtn');
+  if(importBtn)importBtn.onclick=importOldData;
 }
 
 init();
