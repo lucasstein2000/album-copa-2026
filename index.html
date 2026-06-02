@@ -179,8 +179,9 @@ async function bump(code,n,dir){
   render();
   try{
     console.log('Bump:', k, nv, 'User:', user?.id, 'Album:', currentAlbum?.id);
-    if(nv===0)await sb.from('stickers').delete().eq('album_id',currentAlbum.id).eq('sticker_code',k);
-    else await sb.from('stickers').upsert({album_id:currentAlbum.id,sticker_code:k,count:nv});
+    // Delete old, then insert new (avoid conflict)
+    await sb.from('stickers').delete().eq('album_id',currentAlbum.id).eq('sticker_code',k);
+    if(nv>0)await sb.from('stickers').insert({album_id:currentAlbum.id,sticker_code:k,count:nv});
     const {error}=await sb.from('sticker_log').insert({album_id:currentAlbum.id,sticker_code:k,action:dir>0?'add':'remove',user_id:user.id});
     if(error)console.error('Log error:', error);
   }catch(e){console.error('Bump error:', e);toast('Erro ao salvar');}
@@ -251,7 +252,8 @@ async function renderHistory(){
     console.log('Logs:', logs, logError);
     
     const {data:users}=await sb.from('profiles').select('*');
-    const userMap={};users.forEach(u=>userMap[u.id]=u.name);
+    const userMap={};
+    if(users)users.forEach(u=>userMap[u.id]=u.name||'Usuário');
     
     const grouped={};
     (logs||[]).forEach(l=>{
@@ -266,8 +268,9 @@ async function renderHistory(){
     }else{
       Object.entries(grouped).forEach(([code,items])=>{
         const team=TEAMS.find(t=>t.code===code);
+        const userName=userMap[items[0].user_id]||'?';
         html+=`<div class="log-item"><div class="log-team">${code} - ${team?.name||'?'}</div>`;
-        html+=`<div class="log-info">${items.length} mudança${items.length>1?'s':''} por ${userMap[items[0].user_id]||'?'} • Última: ${new Date(items[0].created_at).toLocaleDateString('pt-BR')}</div></div>`;
+        html+=`<div class="log-info">${items.length} mudança${items.length>1?'s':''} por ${userName} • Última: ${new Date(items[0].created_at).toLocaleDateString('pt-BR')}</div></div>`;
       });
     }
     
