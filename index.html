@@ -176,7 +176,21 @@ async function bump(code,n,dir){
   const k=code+'-'+n;
   const nv=Math.max(0,(owned[k]||0)+dir);
   owned[k]=nv;
+  
+  // Salva estado do filtro antes de render
+  const activeFilter=document.querySelector('[data-filter].active')?.dataset.filter||'todas';
+  const searchQuery=document.getElementById('searchTeam')?.value.toLowerCase()||'';
+  
   render();
+  
+  // Restaura filtro
+  setTimeout(()=>{
+    document.querySelectorAll('[data-filter]').forEach(b=>b.classList.remove('active'));
+    document.querySelector(`[data-filter="${activeFilter}"]`)?.classList.add('active');
+    if(document.getElementById('searchTeam'))document.getElementById('searchTeam').value=searchQuery.toUpperCase();
+    applyFilters(activeFilter,searchQuery);
+  },0);
+  
   try{
     console.log('Bump:', k, nv, 'User:', user?.id, 'Album:', currentAlbum?.id);
     // Delete old, then insert new (avoid conflict)
@@ -560,7 +574,7 @@ function exportPDF(){
     script.src='https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js';
     script.onload=()=>{
       let html=`<div style="font-family:Arial;color:#000;background:#fff;padding:10px">
-        <h4 style="margin:0;color:#c41e3a">🔴 FALTAM</h4>`;
+        <h4 style="margin:0">FALTAM</h4>`;
       
       const missing={};
       TEAMS.forEach(t=>{
@@ -574,10 +588,10 @@ function exportPDF(){
       });
       
       Object.entries(missing).forEach(([name,data])=>{
-        html+=`<p style="font-size:12px;margin:3px 0"><strong>${data.flag} ${name}:</strong> ${data.codes.join(', ')}</p>`;
+        html+=`<p style="font-size:12px;margin:3px 0"><strong>${name}:</strong> ${data.codes.join(', ')}</p>`;
       });
       
-      html+=`<h4 style="margin:8px 0 0 0;color:#ffc500">🟡 REPETIDAS</h4>`;
+      html+=`<h4 style="margin:8px 0 0 0">REPETIDAS</h4>`;
       
       const repeated={};
       TEAMS.forEach(t=>{
@@ -587,18 +601,18 @@ function exportPDF(){
           const c=owned[t.code+'-'+i]||0;
           if(c>1)codes.push(i+'(×'+(c-1)+')');
         }
-        if(codes.length>0)repeated[t.name]={flag:t.flag,codes};
+        if(codes.length>0)repeated[t.name]={codes};
       });
       
       Object.entries(repeated).forEach(([name,data])=>{
-        html+=`<p style="font-size:12px;margin:3px 0"><strong>${data.flag} ${name}:</strong> ${data.codes.join(', ')}</p>`;
+        html+=`<p style="font-size:12px;margin:3px 0"><strong>${name}:</strong> ${data.codes.join(', ')}</p>`;
       });
       
       html+=`</div>`;
       
       const element=document.createElement('div');
       element.innerHTML=html;
-      const opt={margin:5,filename:currentAlbum.name+'.pdf',image:{type:'jpeg',quality:0.98},html2canvas:{scale:2},jsPDF:{orientation:'portrait',unit:'mm',format:'a4'}};
+      const opt={margin:5,filename:currentAlbum.name+'.pdf',image:{type:'jpeg',quality:0.98},html2canvas:{scale:4,useCORS:true},jsPDF:{orientation:'portrait',unit:'mm',format:'a4'}};
       window.html2pdf().set(opt).from(element).save();
     };
     document.head.appendChild(script);
@@ -732,9 +746,17 @@ function render(){
       else if(filter==='repetidas')show=show&&isRepeated;
       c.style.display=show?'block':'none';
     });
+    
+    // Oculta teams vazios
+    document.querySelectorAll('.team').forEach(team=>{
+      const hasVisibleCells=team.querySelector('.cell[style="display: block"]');
+      team.style.display=hasVisibleCells?'block':'none';
+    });
+    
+    // Oculta grupos vazios
     document.querySelectorAll('.grp').forEach(grp=>{
-      const hasVisibleCells=grp.querySelector('.cell[style="display: block"], .cell:not([style*="display: none"])');
-      grp.style.display=hasVisibleCells?'block':'none';
+      const hasVisibleTeams=grp.querySelector('.team[style="display: block"]');
+      grp.style.display=hasVisibleTeams?'block':'none';
     });
   }
   
