@@ -285,12 +285,15 @@ async function renderHistory(){
       
       html+=`<div style="margin-bottom:10px">
         <div class="team-toggle" onclick="document.getElementById('${id}').style.display=document.getElementById('${id}').style.display==='none'?'block':'none';this.style.background=this.style.background==='rgba(244,196,48,.2)'?'rgba(0,0,0,.2)':'rgba(244,196,48,.2)'" style="cursor:pointer;padding:10px;background:rgba(244,196,48,.2);border-radius:6px;user-select:none;font-weight:700">
-          ${team?.flag||'?'} <strong>${code} - ${team?.name||'?'}</strong> (${items.length} mudança${items.length>1?'s':''}) por ${userName} • ${lastDate}
+          ${team?.flag||'?'} <strong>${code} - ${team?.name||'?'}</strong> (${items.length} mudança${items.length>1?'s':''}) • ${lastDate}
         </div>
         <div id="${id}" style="display:block;padding-left:12px;margin-top:6px">
-          ${items.map(log=>`<div style="padding:6px;background:rgba(0,0,0,.1);border-radius:4px;margin-bottom:4px;font-size:12px">
-            ${log.sticker_code} • ${log.action==='add'?'➕ Adicionou':'➖ Removeu'} • ${new Date(log.created_at).toLocaleString('pt-BR')}
-          </div>`).join('')}
+          ${items.map(log=>{
+            const logUserName=userMap[log.user_id]||'?';
+            return `<div style="padding:6px;background:rgba(0,0,0,.1);border-radius:4px;margin-bottom:4px;font-size:12px">
+              ${log.sticker_code} • ${log.action==='add'?'➕ Adicionou':'➖ Removeu'} • ${new Date(log.created_at).toLocaleString('pt-BR')} por ${logUserName}
+            </div>`;
+          }).join('')}
         </div>
       </div>`;
     });
