@@ -41,7 +41,6 @@ import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js
 
 const SUPABASE_URL = "https://fektmbitypzwsgfiriyk.supabase.co";
 const SUPABASE_KEY = "sb_publishable_qIXLVOOYRI4oi129YzR9dw_I-8cuW_V";
-const ADMIN_EMAIL = "lucasstein2000@gmail.com";
 
 const TEAMS=[
   ['FWC','Abertura','FWC',20],
@@ -159,15 +158,6 @@ async function inviteCollaborator(){
     await sb.from('album_collaborators').insert({album_id:currentAlbum.id,user_id:profile.id});
     toast('Colaborador adicionado!');
     render();
-  }catch(e){toast('Erro: '+e.message);}
-}
-  if(user.email!==ADMIN_EMAIL){toast('Só admin pode importar');return;}
-  try{
-    const {data:old}=await sb.from('stickers').select('sticker_code,count').eq('album_id','albumcopa2026');
-    if(!old||!old.length){toast('Nenhum dado antigo');return;}
-    await Promise.all(old.map(r=>sb.from('stickers').upsert({album_id:currentAlbum.id,sticker_code:r.sticker_code,count:r.count})));
-    await loadStickers();
-    toast('Importado!');
   }catch(e){toast('Erro: '+e.message);}
 }
 
@@ -298,7 +288,6 @@ function render(){
       <button class="tab-btn active" data-tab="album">📊 Álbum</button>
       <button class="tab-btn" data-tab="market">🔄 Trocas</button>
       <button class="tab-btn" data-tab="history">🕘 Histórico</button>
-      ${user.email===ADMIN_EMAIL?'<button class="tab-btn" data-tab="admin">🔧 Admin</button>':''}
     </div>
     
     <div id="album" class="tab-content active">
@@ -328,7 +317,6 @@ function render(){
     
     <div id="market" class="tab-content"><p style="opacity:.6">Carregando trocas…</p></div>
     <div id="history" class="tab-content"><p style="opacity:.6">Carregando histórico…</p></div>
-    ${user.email===ADMIN_EMAIL?'<div id="admin" class="tab-content"><button class="btn-gold" id="importBtn">Importar dados antigos</button></div>':''}
   `;
   
   app.innerHTML=html;
@@ -359,9 +347,6 @@ function render(){
     },false);
     c.addEventListener('contextmenu',(e)=>{e.preventDefault();bump(code,n,-1);},false);
   });
-  
-  const importBtn=document.getElementById('importBtn');
-  if(importBtn)importBtn.onclick=importOldData;
 }
 
 init();
