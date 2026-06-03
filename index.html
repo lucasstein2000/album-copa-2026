@@ -244,22 +244,28 @@ async function renderMarketplace(){
     // Todos os códigos possíveis
     const allCodes=TEAMS.flatMap(t=>t.code==='CC'?[]:[...Array(t.count).keys()].map(i=>`${t.code}-${i+1}`));
     
+    console.log('loadMarketplace done. allAlbums:', Object.keys(allAlbums).length, 'allUsers:', Object.keys(allUsers).length, 'user:', user?.id);
+    
     // Meu estado consolidado (todos meus álbuns)
     const myAllReps=new Set();
     const myAllMissing=new Set(allCodes);
     
+    const myAlbumIds=[];
     for(const [id,alb] of Object.entries(allAlbums)){
-      if(alb.owner_id !== user.id)continue; // Só meus álbuns
+      console.log('Album:', id, 'owner:', alb.owner_id, 'myId:', user?.id, 'match:', alb.owner_id === user?.id);
+      if(alb.owner_id !== user?.id)continue;
+      myAlbumIds.push(id);
       try{
-        const {data:sticks}=await sb.from('stickers').select('sticker_code').eq('album_id',id);
+        const {data:sticks}=await sb.from('stickers').select('sticker_code,count').eq('album_id',id);
+        console.log('  Stickers in this album:', sticks?.length||0);
         (sticks||[]).forEach(s=>{
           if(s.count>1)myAllReps.add(s.sticker_code);
           if(s.count>0)myAllMissing.delete(s.sticker_code);
         });
-      }catch(e){}
+      }catch(e){console.error('Erro loading stickers:', e);}
     }
     
-    console.log('My consolidated - Reps:', myAllReps.size, 'Missing:', myAllMissing.size);
+    console.log('My albums:', myAlbumIds, 'Reps:', myAllReps.size, 'Missing:', myAllMissing.size);
     
     // Agrupa álbuns por pessoa colaboradora
     const peopleAlbums={};
