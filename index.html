@@ -195,13 +195,32 @@ async function bump(code,n,dir){
   }
   
   try{
-    console.log('Bump:', k, nv, 'User:', user?.id, 'Album:', currentAlbum?.id);
-    // Delete old, then insert new (avoid conflict)
-    await sb.from('stickers').delete().eq('album_id',currentAlbum.id).eq('sticker_code',k);
-    if(nv>0)await sb.from('stickers').insert({album_id:currentAlbum.id,sticker_code:k,count:nv});
-    const {error}=await sb.from('sticker_log').insert({album_id:currentAlbum.id,sticker_code:k,action:dir>0?'add':'remove',user_id:user.id});
-    if(error)console.error('Log error:', error);
-  }catch(e){console.error('Bump error:', e);toast('Erro ao salvar');}
+    console.log('Bump:', k, 'count:', nv, 'User:', user?.id, 'Album:', currentAlbum?.id);
+    
+    // Delete old
+    const delRes=await sb.from('stickers').delete().eq('album_id',currentAlbum.id).eq('sticker_code',k);
+    console.log('Delete result:', delRes);
+    
+    // Insert new if count > 0
+    if(nv>0){
+      const insRes=await sb.from('stickers').insert({album_id:currentAlbum.id,sticker_code:k,count:nv});
+      console.log('Insert result:', insRes);
+      if(insRes.error){
+        console.error('Insert error:', insRes.error);
+        toast('Erro ao salvar sticker');
+        return;
+      }
+    }
+    
+    // Log action
+    const logRes=await sb.from('sticker_log').insert({album_id:currentAlbum.id,sticker_code:k,action:dir>0?'add':'remove',user_id:user.id});
+    console.log('Log result:', logRes);
+    if(logRes.error)console.error('Log error:', logRes.error);
+    
+  }catch(e){
+    console.error('Bump error:', e);
+    toast('Erro ao salvar: '+e.message);
+  }
 }
 
 async function inviteCollaborator(){
