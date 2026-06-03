@@ -240,38 +240,39 @@ async function renderMarketplace(){
   try{
     await loadMarketplace();
     let html='<h2>🔄 Trocas</h2>';
+    
+    // Meu estado: repetidas e faltando
     const myReps=Object.entries(owned).filter(([k,v])=>v>1).map(([k])=>k);
-    console.log('My reps:', myReps);
-    console.log('All albums:', Object.keys(allAlbums));
-    console.log('Current album:', currentAlbum?.id);
+    const allCodes=TEAMS.flatMap(t=>t.code==='CC'?[]:[...Array(t.count).keys()].map(i=>`${t.code}-${i+1}`));
+    const myMissing=allCodes.filter(k=>!owned[k]);
+    
+    console.log('My reps:', myReps.length, 'My missing:', myMissing.length);
     
     let foundTrades=0;
     for(const [id,album] of Object.entries(allAlbums)){
-      console.log('Checking album:', id, album.name);
-      if(id===currentAlbum.id){
-        console.log('  Skipping (own album)');
-        continue;
-      }
+      if(id===currentAlbum.id)continue;
       try{
-        const {data:sticks}=await sb.from('stickers').select('sticker_code').eq('album_id',id).gt('count',1);
-        const theirReps=(sticks||[]).map(s=>s.sticker_code);
+        // Dados do outro álbum
+        const {data:sticks}=await sb.from('stickers').select('sticker_code').eq('album_id',id);
+        const theirOwned={};
+        (sticks||[]).forEach(s=>{if(s.count>0)theirOwned[s.sticker_code]=s.count;});
+        const theirReps=Object.keys(theirOwned).filter(k=>theirOwned[k]>1);
+        const theirMissing=allCodes.filter(k=>!theirOwned[k]);
+        
         const owner=allUsers[album.owner_id];
+        console.log('Album:', album.name, 'Their reps:', theirReps.length, 'Their missing:', theirMissing.length);
         
-        console.log('  Owner:', owner?.name, 'Their reps:', theirReps.length);
+        if(!owner)continue;
         
-        if(!owner){
-          console.log('  Skipping (no owner found)');
-          continue;
-        }
+        // Comparação correta
+        const canGive=myReps.filter(r=>theirMissing.includes(r));
+        const canReceive=theirReps.filter(r=>myMissing.includes(r));
         
-        const myNeed=myReps.filter(r=>theirReps.includes(r));
-        const theyNeed=theirReps.filter(r=>myReps.includes(r));
-        
-        if(myNeed.length>0||theyNeed.length>0){
+        if(canGive.length>0||canReceive.length>0){
           foundTrades++;
           html+=`<div class="trade-box"><div class="user">${owner.name} — ${album.name}</div>`;
-          if(myNeed.length>0)html+=`<div class="trade-item">🔴 Você pode dar: ${myNeed.join(', ')}</div>`;
-          if(theyNeed.length>0)html+=`<div class="trade-item">🟢 Você pode receber: ${theyNeed.join(', ')}</div>`;
+          if(canGive.length>0)html+=`<div class="trade-item">🔴 Você pode dar: ${canGive.join(', ')}</div>`;
+          if(canReceive.length>0)html+=`<div class="trade-item">🟢 Você pode receber: ${canReceive.join(', ')}</div>`;
           html+=`</div>`;
         }
       }catch(e){console.error('Erro ao processar album:', id, e);}
