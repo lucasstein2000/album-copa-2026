@@ -287,8 +287,12 @@ async function renderMarketplace(){
         
         for(const albId of data.albums){
           const {data:sticks}=await sb.from('stickers').select('sticker_code').eq('album_id',albId);
+          console.log('  Album', albId, 'stickers:', sticks?.length||0);
           (sticks||[]).forEach(s=>{
-            if(s.count>1)theirReps.add(s.sticker_code);
+            if(s.count>1){
+              console.log('    Rep found:', s.sticker_code, 'count:', s.count);
+              theirReps.add(s.sticker_code);
+            }
             if(s.count>0)theirMissing.delete(s.sticker_code);
           });
         }
@@ -297,7 +301,7 @@ async function renderMarketplace(){
         const canGive=[...myAllReps].filter(r=>theirMissing.has(r));
         const canReceive=[...theirReps].filter(r=>myAllMissing.has(r));
         
-        console.log('Person:', data.name, 'Can give:', canGive.length, 'Can receive:', canReceive.length);
+        console.log('Person:', data.name, 'Their reps:', theirReps.size, 'Their missing:', theirMissing.size, 'Can give:', canGive.length, 'Can receive:', canReceive.length);
         
         if(canGive.length>0||canReceive.length>0){
           foundTrades++;
