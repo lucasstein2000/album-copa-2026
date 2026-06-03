@@ -305,7 +305,7 @@ async function renderMarketplace(){
         const theirMissing=new Set(allCodes);
         
         for(const albId of data.albums){
-          const {data:sticks}=await sb.from('stickers').select('sticker_code').eq('album_id',albId);
+          const {data:sticks}=await sb.from('stickers').select('sticker_code,count').eq('album_id',albId);
           console.log('  Album', albId, 'stickers:', sticks?.length||0);
           (sticks||[]).forEach(s=>{
             if(s.count>1){
