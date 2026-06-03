@@ -249,7 +249,7 @@ async function renderMarketplace(){
     const myAllMissing=new Set(allCodes);
     
     for(const [id,alb] of Object.entries(allAlbums)){
-      if(allUsers[alb.owner_id]?.id !== user.id)continue; // Só meus álbuns
+      if(alb.owner_id !== user.id)continue; // Só meus álbuns
       try{
         const {data:sticks}=await sb.from('stickers').select('sticker_code').eq('album_id',id);
         (sticks||[]).forEach(s=>{
